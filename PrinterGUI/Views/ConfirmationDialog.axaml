@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PrinterGUI.Views.ConfirmationDialog"
+        Width="420" Height="160"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Title="Confirm Send">
+  <StackPanel Margin="12">
+    <TextBlock x:Name="MessageText" TextWrapping="Wrap" Margin="0,0,0,12" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+      <Button Content="Cancel" Width="90" Margin="0,0,8,0" Click="Cancel_Click"/>
+      <Button Content="Send" Width="90" Click="Send_Click"/>
+    </StackPanel>
+  </StackPanel>
+</Window>

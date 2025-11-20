@@ -1,0 +1,29 @@
+# Visual Studio / .NET
+.vs/
+bin/
+obj/
+publish/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet / packages
+*.nupkg
+packages/
+.nuget/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs / DB
+*.log
+*.db
+
+# Secrets
+secrets.json
+*.pem
+*.key
