@@ -252,7 +252,7 @@ namespace PrinterGUI.Services
             }
             return false;
         }
-
+        //test
         static bool TryParseEstimatedTime(string output, out TimeSpan? estimated)
         {
             estimated = null;

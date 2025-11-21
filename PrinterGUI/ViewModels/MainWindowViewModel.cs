@@ -194,11 +194,11 @@ namespace PrinterGUI.ViewModels
                     layerHeight,
                     infill,
                     extruderTemp,
-                    dryingTemp,    // 6th param
-                    dryingTime,    // 7th param (int)
-                    printSpeed,    // 8th param (double)
+                    dryingTemp,
+                    dryingTime,
+                    printSpeed,
                     prusaSlicerPath: PrusaSlicerPath,
-                    profilePath: null,
+                    profilePath: "/home/raspberrypie/config.ini",
                     extraArgs: null,
                     timeout: TimeSpan.FromMinutes(12),
                     outputProgress: progressText,
@@ -260,7 +260,7 @@ namespace PrinterGUI.ViewModels
                     dryingTime,    // 7th param (int)
                     printSpeed,    // 8th param (double)
                     prusaSlicerPath: PrusaSlicerPath,
-                    profilePath: null,
+                    profilePath: "/home/raspberrypie/config.ini",
                     extraArgs: null,
                     timeout: TimeSpan.FromMinutes(12),
                     outputProgress: slicerProgress,
