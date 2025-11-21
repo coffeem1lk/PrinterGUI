@@ -28,7 +28,8 @@ namespace PrinterGUI.Services
     /// If <paramref name="profilePath"/> is provided it will be passed with --load.
     /// Common overrides (layerHeight, infillPercent, nozzle temps, printSpeed) are translated to CLI flags.
     /// The "dryingTemp", "dryingTime" and "dryingTimeRT" parameters are NOT passed to PrusaSlicer; they are saved as sidecar metadata
-    /// next to the generated .gcode file for later use by an external Python post-processor.
+    /// next to the generated .gcode file for later use by an external post-processor (now also available as a managed component).
+    /// The slice will now be considered failed if the managed post-processor fails.
     /// You may supply additional flags via extraArgs.
     /// </summary>
     public static class GcodeGenerator
@@ -202,7 +203,7 @@ namespace PrinterGUI.Services
                 if (!result.Success && File.Exists(outputGcodePath))
                     result.Success = true;
 
-                // If gcode was produced, save a sidecar metadata JSON for downstream post-processing (Python)
+                // If gcode was produced, save a sidecar metadata JSON for downstream post-processing
                 if (File.Exists(outputGcodePath))
                 {
                     try
@@ -214,9 +215,9 @@ namespace PrinterGUI.Services
                             GcodePath = Path.GetFullPath(outputGcodePath),
                             LayerHeight = layerHeight,
                             InfillPercent = infillPercent,
-                            DryingTemp = dryingTemp, // stored for later Python script
-                            DryingTime = dryingTime, // stored for later Python script (minutes)
-                            DryingTimeRT = dryingTimeRT, // stored for later Python script (minutes, RT)
+                            DryingTemp = dryingTemp, // stored for later post-processor
+                            DryingTime = dryingTime, // stored for later post-processor (minutes)
+                            DryingTimeRT = dryingTimeRT, // stored for later post-processor (minutes, RT)
                             PrusaSlicerExe = prusaSlicerPath,
                             ProfileUsed = profilePath,
                             CommandLine = launchCmd
@@ -225,10 +226,62 @@ namespace PrinterGUI.Services
                         string metaPath = outputGcodePath + ".meta.json";
                         var js = JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true });
                         File.WriteAllText(metaPath, js, Encoding.UTF8);
+
+                        // Run managed post-processor and fail the slice if the post-processor fails.
+                        outputProgress?.Report("Running post-processor...");
+                        var postResult = await PostProcessGcode.ProcessAsync(outputGcodePath, outputProgress, cancellationToken).ConfigureAwait(false);
+
+                        // Append diagnostics from post-processor
+                        if (postResult != null)
+                        {
+                            foreach (var m in postResult.Messages)
+                                stderrBuilder.AppendLine(m);
+
+                            foreach (var kv in postResult.Counts)
+                                stdoutBuilder.AppendLine($"{kv.Key}: {kv.Value}");
+                        }
+                        else
+                        {
+                            stderrBuilder.AppendLine("Post-processor returned null result.");
+                        }
+
+                        // If post-processing failed, mark the slice as failed and return immediately with diagnostics.
+                        if (postResult == null || !postResult.Success)
+                        {
+                            var msgSb = new StringBuilder();
+                            msgSb.Append("Post-processing failed");
+                            if (postResult != null && postResult.Messages.Count > 0)
+                            {
+                                msgSb.Append(": ");
+                                msgSb.Append(string.Join(" | ", postResult.Messages));
+                            }
+                            else if (postResult == null)
+                            {
+                                msgSb.Append(": no result returned");
+                            }
+
+                            result.Success = false;
+                            result.Error = msgSb.ToString();
+                            result.Output = stdoutBuilder.ToString();
+                            result.ExitCode = -2; // indicate post-processing failure
+                            outputProgress?.Report("Post-processor failed; marking slice as failed.");
+                            return result;
+                        }
+
+                        outputProgress?.Report("Post-processor finished.");
+                        // update result outputs to include any post-processor messages
+                        result.Output = stdoutBuilder.ToString();
+                        result.Error = stderrBuilder.ToString();
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // best-effort: do not fail the slice if metadata write fails
+                        // If the post-processor throws, treat as a post-processing failure and fail the slice.
+                        result.Success = false;
+                        result.Error = $"Post-processor threw an exception: {ex.Message}";
+                        result.Output = stdoutBuilder.ToString();
+                        result.ExitCode = -3;
+                        outputProgress?.Report("Post-processor threw an exception; marking slice as failed.");
+                        return result;
                     }
                 }
             }
