@@ -27,7 +27,7 @@ namespace PrinterGUI.Services
     /// Use <paramref name="prusaSlicerPath"/> to point to the executable (default 'prusa-slicer').
     /// If <paramref name="profilePath"/> is provided it will be passed with --load.
     /// Common overrides (layerHeight, infillPercent, nozzle temps, printSpeed) are translated to CLI flags.
-    /// The "dryingTemp" and "dryingTime" parameters are NOT passed to PrusaSlicer; they are saved as sidecar metadata
+    /// The "dryingTemp", "dryingTime" and "dryingTimeRT" parameters are NOT passed to PrusaSlicer; they are saved as sidecar metadata
     /// next to the generated .gcode file for later use by an external Python post-processor.
     /// You may supply additional flags via extraArgs.
     /// </summary>
@@ -40,7 +40,8 @@ namespace PrinterGUI.Services
             int infillPercent = 90,
             int nozzleTemp = 0,
             int dryingTemp = 0,                // stored for later post-processing
-            int dryingTime = 0,                 // stored for later post-processing
+            int dryingTime = 0,               // stored for later post-processing (minutes)
+            int dryingTimeRT = 0,             // stored for later post-processing (minutes, RT)
             double printSpeed = 11.5,
             string prusaSlicerPath = "prusa-slicer",
             string? profilePath = "/home/raspberrypie/config.ini",
@@ -83,12 +84,13 @@ namespace PrinterGUI.Services
 
             args.Append("--first-layer-temperature ").Append(nozzleTemp.ToString(CultureInfo.InvariantCulture)).Append(' ');
             args.Append("--temperature ").Append(nozzleTemp.ToString(CultureInfo.InvariantCulture)).Append(' ');
-            // NOTE: dryingTemp and dryingTime are intentionally NOT passed to PrusaSlicer.
+            // NOTE: dryingTemp, dryingTime and dryingTimeRT are intentionally NOT passed to PrusaSlicer.
             // args.Append("--bed-temperature ").Append(dryingTemp.ToString(CultureInfo.InvariantCulture)).Append(' ');
             // print speed may be global percentage or mm/s depending on version; use --print-speed for common builds
             args.Append("--infill-speed ").Append(printSpeed.ToString(CultureInfo.InvariantCulture)).Append(' ');
             args.Append("--first-layer-infill-speed ").Append(printSpeed.ToString(CultureInfo.InvariantCulture)).Append(' ');
             args.Append("--perimeter-speed ").Append(printSpeed.ToString(CultureInfo.InvariantCulture)).Append(' ');
+            args.Append("--external-perimeter-speed ").Append(printSpeed.ToString(CultureInfo.InvariantCulture)).Append(' ');
 
             // append any extra args the caller wants
             if (!string.IsNullOrWhiteSpace(extraArgs))
@@ -212,10 +214,9 @@ namespace PrinterGUI.Services
                             GcodePath = Path.GetFullPath(outputGcodePath),
                             LayerHeight = layerHeight,
                             InfillPercent = infillPercent,
-                            NozzleTemp = nozzleTemp,
                             DryingTemp = dryingTemp, // stored for later Python script
                             DryingTime = dryingTime, // stored for later Python script (minutes)
-                            PrintSpeed = printSpeed,
+                            DryingTimeRT = dryingTimeRT, // stored for later Python script (minutes, RT)
                             PrusaSlicerExe = prusaSlicerPath,
                             ProfileUsed = profilePath,
                             CommandLine = launchCmd

@@ -48,41 +48,70 @@
         <!-- Parameters and actions -->
         <StackPanel Grid.Column="1">
           <TextBlock Text="Print Parameters" FontWeight="Bold" Margin="4"/>
-          <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-            <TextBlock Text="Extruder (&#176;C)" Width="110" VerticalAlignment="Center"/>
-            <TextBox Text="{Binding ExtruderTemp}" Width="120"/>
-          </StackPanel>
 
-          <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-            <TextBlock Text="Drying Temp (&#176;C)" Width="110" VerticalAlignment="Center"/>
-            <TextBox Text="{Binding DryingTemp}" Width="120"/>
-          </StackPanel>
+          <!-- Two-column grid for parameters: left column general, right column drying parameters -->
+          <Grid Margin="0,6,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="1*"/>
+              <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
 
-          <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-            <TextBlock Text="Layer mm" Width="110" VerticalAlignment="Center"/>
-            <TextBox Text="{Binding LayerHeight}" Width="120"/>
-          </StackPanel>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/> <!-- Extruder / Drying Temp -->
+              <RowDefinition Height="Auto"/> <!-- Layer / Drying Time -->
+              <RowDefinition Height="Auto"/> <!-- Infill / Drying Time RT -->
+              <RowDefinition Height="Auto"/> <!-- Speed / (empty) -->
+              <RowDefinition Height="Auto"/> <!-- Serial port (span) -->
+            </Grid.RowDefinitions>
 
-          <!-- Drying time (minutes) -->
-          <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-            <TextBlock Text="Drying time (min)" Width="110" VerticalAlignment="Center"/>
-            <TextBox Text="{Binding DryingTime}" Width="120"/>
-          </StackPanel>
+            <!-- Extruder -->
+            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
+              <TextBlock Text="Extruder Temp (&#176;C)" Width="132" VerticalAlignment="Center"/>
+              <TextBox Text="{Binding ExtruderTemp}" Width="60"/>
+            </StackPanel>
 
-          <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-            <TextBlock Text="Infill %" Width="110" VerticalAlignment="Center"/>
-            <TextBox Text="{Binding Infill}" Width="120"/>
-          </StackPanel>
+            <!-- Drying Temp (moved to right column, pulled left a bit) -->
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="-20,0,0,6">
+              <TextBlock Text="Drying Temp (&#176;C)" Width="132" VerticalAlignment="Center"/>
+              <TextBox Text="{Binding DryingTemp}" Width="60"/>
+            </StackPanel>
 
-          <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-            <TextBlock Text="Speed mm/s" Width="110" VerticalAlignment="Center"/>
-            <TextBox Text="{Binding PrintSpeed}" Width="120"/>
-          </StackPanel>
+            <!-- Layer height -->
+            <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
+              <TextBlock Text="Layer Height (mm)" Width="132" VerticalAlignment="Center"/>
+              <TextBox Text="{Binding LayerHeight}" Width="60"/>
+            </StackPanel>
 
-          <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-            <TextBlock Text="Serial Port" Width="110" VerticalAlignment="Center"/>
-            <TextBox Text="{Binding SerialPortPath}" Width="160" Watermark="/dev/ttyUSB0 or /dev/ttyACM0"/>
-          </StackPanel>
+            <!-- Drying time -->
+            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="-20,0,0,6">
+              <TextBlock Text="Drying Time (min)" Width="132" VerticalAlignment="Center"/>
+              <TextBox Text="{Binding DryingTime}" Width="60"/>
+            </StackPanel>
+
+            <!-- Infill -->
+            <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
+              <TextBlock Text="Infill Density (%)" Width="132" VerticalAlignment="Center"/>
+              <TextBox Text="{Binding Infill}" Width="60"/>
+            </StackPanel>
+
+            <!-- Drying time RT -->
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="-20,0,0,6">
+              <TextBlock Text="Drying Time RT (min)" Width="132" VerticalAlignment="Center"/>
+              <TextBox Text="{Binding DryingTimeRT}" Width="60"/>
+            </StackPanel>
+
+            <!-- Print speed -->
+            <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
+              <TextBlock Text="Print Speed (mm/s)" Width="132" VerticalAlignment="Center"/>
+              <TextBox Text="{Binding PrintSpeed}" Width="60"/>
+            </StackPanel>
+
+            <!-- Serial Port spans both columns and keeps original wider textbox -->
+            <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,6,0,0">
+              <TextBlock Text="Serial Port" Width="132" VerticalAlignment="Center"/>
+              <TextBox Text="{Binding SerialPortPath}" Width="160" Watermark="/dev/ttyUSB0 or /dev/ttyACM0"/>
+            </StackPanel>
+          </Grid>
 
           <!-- Generate and Send buttons -->
           <StackPanel Orientation="Horizontal" Margin="0,12,0,0" HorizontalAlignment="Left" Spacing="8">

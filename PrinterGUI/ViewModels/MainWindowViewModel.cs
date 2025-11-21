@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using PrinterGUI.Models;
 using PrinterGUI.Services;
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
+using System.Globalization;
 
 namespace PrinterGUI.ViewModels
 {
@@ -32,6 +35,9 @@ namespace PrinterGUI.ViewModels
 
         // new: drying time (minutes) stored as string for binding
         public string DryingTime { get; set; } = "0";
+
+        // new: Drying time RT (minutes) stored for post-processing only
+        public string DryingTimeRT { get; set; } = "0";
 
         // CLI binary (can remain default command if on PATH)
         public string PrusaSlicerPath { get; set; } = "prusa-slicer";
@@ -188,6 +194,13 @@ namespace PrinterGUI.ViewModels
                     return;
                 }
 
+                int dryingTimeRT = 0;
+                if (!int.TryParse(DryingTimeRT, out dryingTimeRT))
+                {
+                    Status = "Invalid drying time RT";
+                    return;
+                }
+
                 var result = await GcodeGenerator.SliceWithPrusaAsync(
                     stlPath,
                     outPath,
@@ -196,6 +209,7 @@ namespace PrinterGUI.ViewModels
                     extruderTemp,
                     dryingTemp,
                     dryingTime,
+                    dryingTimeRT,
                     printSpeed,
                     prusaSlicerPath: PrusaSlicerPath,
                     profilePath: "/home/raspberrypie/config.ini",
@@ -219,13 +233,18 @@ namespace PrinterGUI.ViewModels
             }
         }
 
-        // Generate ODFX.gcode, send to printer, then delete the generated gcode file
+        // Generate temp gcode, send to printer, then delete the temp file and any older generated files for the selected model
         async Task SendToPrinterAsync()
         {
             if (SelectedObject == null) { Status = "Select an object first"; return; }
 
             if (!TryParseInputs(out int extruderTemp, out int dryingTemp, out double layerHeight, out int infill, out double printSpeed))
                 return;
+
+            // Prepare model path early so deletion can target the model's folder after send
+            string stlPath = SelectedObject.FileName;
+            if (!Path.IsPathRooted(stlPath))
+                stlPath = Path.Combine(_modelsFolder, stlPath);
 
             // create temp gcode via slicer
             string tempPath = Path.Combine(Path.GetTempPath(), $"print_{Guid.NewGuid():N}.gcode");
@@ -237,15 +256,19 @@ namespace PrinterGUI.ViewModels
             var slicerProgress = new Progress<string>(s => Status = s);
             try
             {
-                string stlPath = SelectedObject.FileName;
-                if (!Path.IsPathRooted(stlPath))
-                    stlPath = Path.Combine(_modelsFolder, stlPath);
-
                 // ensure dryingTime is passed in the correct position (7th parameter) and printSpeed stays double
                 int dryingTime = 0;
                 if (!int.TryParse(DryingTime, out dryingTime))
                 {
                     Status = "Invalid drying time";
+                    IsSending = false;
+                    return;
+                }
+
+                int dryingTimeRT = 0;
+                if (!int.TryParse(DryingTimeRT, out dryingTimeRT))
+                {
+                    Status = "Invalid drying time RT";
                     IsSending = false;
                     return;
                 }
@@ -258,7 +281,8 @@ namespace PrinterGUI.ViewModels
                     extruderTemp,
                     dryingTemp,    // 6th param
                     dryingTime,    // 7th param (int)
-                    printSpeed,    // 8th param (double)
+                    dryingTimeRT,  // new param (RT)
+                    printSpeed,    // 9th param (double)
                     prusaSlicerPath: PrusaSlicerPath,
                     profilePath: "/home/raspberrypie/config.ini",
                     extraArgs: null,
@@ -286,10 +310,12 @@ namespace PrinterGUI.ViewModels
             var progText = new Progress<string>(s => Status = s);
             var progPercent = new Progress<int>(p => Progress = p);
 
+            bool sendSucceeded = false;
             try
             {
                 await _serial.SendFileAsync(tempPath, SerialPortPath, 115200, progText, progPercent, _cts.Token);
                 Status = "Send complete";
+                sendSucceeded = true;
             }
             catch (Exception ex)
             {
@@ -301,6 +327,136 @@ namespace PrinterGUI.ViewModels
                 _cts?.Dispose();
                 _cts = null;
                 try { File.Delete(tempPath); } catch { }
+
+                if (sendSucceeded)
+                {
+                    // Clean up older generated files for the same model (created by previous "Generate Gcode" runs).
+                    // Runs off the UI thread and reports a short status update when done.
+                    _ = Task.Run(async () =>
+                    {
+                        await DeleteOldGeneratedFilesAsync(stlPath).ConfigureAwait(false);
+                    });
+                }
+            }
+        }
+
+        async Task DeleteOldGeneratedFilesAsync(string stlPath)
+        {
+            try
+            {
+                string dir = Path.GetDirectoryName(stlPath) ?? _modelsFolder;
+                string baseName = Path.GetFileNameWithoutExtension(stlPath);
+
+                if (!Directory.Exists(dir))
+                    return;
+
+                // Pattern used by GenerateGcodeAsync: BaseName_yyyyMMdd_HHmmss.gcode
+                var pattern = new Regex("^" + Regex.Escape(baseName) + @"_(\d{8}_\d{6})\.gcode$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+                var candidates = Directory.GetFiles(dir, baseName + "_*.gcode", SearchOption.TopDirectoryOnly);
+                var parsed = new List<(string Path, DateTime TimeUtc)>(candidates.Length);
+
+                foreach (var f in candidates)
+                {
+                    var fn = Path.GetFileName(f);
+                    var m = pattern.Match(fn);
+                    if (m.Success)
+                    {
+                        if (DateTime.TryParseExact(m.Groups[1].Value, "yyyyMMdd_HHmmss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var dt))
+                        {
+                            parsed.Add((f, dt));
+                            continue;
+                        }
+                    }
+
+                    // fallback to file last write time (UTC)
+                    try
+                    {
+                        var t = File.GetLastWriteTimeUtc(f);
+                        parsed.Add((f, t));
+                    }
+                    catch
+                    {
+                        // if we can't read time, assign MinValue so it will be deleted first
+                        parsed.Add((f, DateTime.MinValue));
+                    }
+                }
+
+                // Keep the most recent N entries, delete older ones
+                const int KeepCount = 75;
+                var toDelete = parsed
+                    .OrderByDescending(x => x.TimeUtc)
+                    .Skip(KeepCount)
+                    .Select(x => x.Path)
+                    .ToList();
+
+                var deleted = new List<string>();
+                foreach (var f in toDelete)
+                {
+                    try
+                    {
+                        if (File.Exists(f))
+                        {
+                            File.Delete(f);
+                            deleted.Add(f);
+                        }
+                    }
+                    catch { /* best-effort */ }
+
+                    // delete common sidecars if present (.cmdline.txt, .postproc.json, .meta.json)
+                    foreach (var side in new[] { ".cmdline.txt", ".postproc.json", ".meta.json" })
+                    {
+                        try
+                        {
+                            var sf = f + "." + side.TrimStart('.'); // f + ".cmdline.txt" etc.
+                            if (File.Exists(sf))
+                            {
+                                File.Delete(sf);
+                                deleted.Add(sf);
+                            }
+                        }
+                        catch { /* best-effort */ }
+                    }
+
+                    // handle backup name variants:
+                    // 1) <file>.gcode.orig.gcode  (created by some backups)
+                    // 2) <file>.orig.gcode
+                    // 3) <file without .gcode>.orig.gcode
+                    try
+                    {
+                        var candidate1 = f + ".orig.gcode"; // produces file.gcode.orig.gcode
+                        if (File.Exists(candidate1))
+                        {
+                            File.Delete(candidate1);
+                            deleted.Add(candidate1);
+                        }
+                    }
+                    catch { /* best-effort */ }
+
+                    try
+                    {
+                        var candidate2 = Path.ChangeExtension(f, ".orig.gcode"); // produces file.orig.gcode
+                        if (candidate2 != null && File.Exists(candidate2))
+                        {
+                            File.Delete(candidate2);
+                            deleted.Add(candidate2);
+                        }
+                    }
+                    catch { /* best-effort */ }
+                }
+
+                if (deleted.Count > 0)
+                {
+                    _uiContext?.Post(_ =>
+                    {
+                        Status = $"Deleted {deleted.Count} generated file(s)";
+                        Progress = 0;
+                    }, null);
+                }
+            }
+            catch
+            {
+                // ignore
             }
         }
 
