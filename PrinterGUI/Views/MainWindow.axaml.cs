@@ -31,5 +31,14 @@ namespace PrinterGUI.Views
                     vm.SendToPrinterCommand.Execute(null);
             }
         }
+
+        private void AxisControl_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm)
+            {
+                var axisWindow = new AxisControlWindow(vm.SerialPortPath);
+                axisWindow.Show();
+            }
+        }
     }
 }
