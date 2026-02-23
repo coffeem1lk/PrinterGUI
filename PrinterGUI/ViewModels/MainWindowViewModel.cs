@@ -24,7 +24,7 @@ namespace PrinterGUI.ViewModels
         PrintObject? _selectedObject;
         public PrintObject? SelectedObject { get => _selectedObject; set { _selectedObject = value; Notify(nameof(SelectedObject)); UpdateCanSend(); } }
 
-        public string SerialPortPath { get; set; } = "/dev/ttyUSB0";
+        public string SerialPortPath { get; set; } = "/dev/ttyACM0";
 
         // parameters
         public string ExtruderTemp { get; set; } = "0";
@@ -175,7 +175,12 @@ namespace PrinterGUI.ViewModels
             Progress = 0;
 
             using var cts = new CancellationTokenSource();
-            var progressText = new Progress<string>(s => Status = s);
+            var progressText = new Progress<string>(s => 
+            {
+                // Only show important messages, not every G-code line
+                if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">"))
+                    Status = s;
+            });
 
             try
             {

@@ -25,7 +25,7 @@ namespace PrinterGUI.ViewModels
         public ICommand HomeAllCommand { get; }
         public ICommand DisableMotorsCommand { get; }
 
-        public AxisControlViewModel(string serialPort = "/dev/ttyUSB0")
+        public AxisControlViewModel(string serialPort = "/dev/ttyACM0")
         {
             _serialPort = serialPort;
 
