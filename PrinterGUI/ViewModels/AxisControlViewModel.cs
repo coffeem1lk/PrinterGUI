@@ -46,8 +46,16 @@ namespace PrinterGUI.ViewModels
                 return;
             }
 
-            // Use relative positioning for moves: G91 (relative), G0 (rapid move), G90 (absolute) after
-            var gcode = $"G91\nG0 {axis}{distance:F2}\nG90";
+            // Use appropriate feedrates for each axis
+            var feedrate = axis switch
+            {
+                "X" or "Y" => "F3000", // 3000 mm/min for XY (50 mm/s)
+                "Z" => "F400",          // 400 mm/min for Z (~6.7 mm/s)
+                _ => "F3000"
+            };
+
+            // Use G1 (controlled move) with explicit feedrate
+            var gcode = $"G91\nG1 {axis}{distance:F2} {feedrate}\nG90";
             await SendGcodeAsync(gcode);
         }
 
@@ -59,9 +67,9 @@ namespace PrinterGUI.ViewModels
                 return;
             }
 
-            // Select tool (T0 or T1), then move E in relative mode
+            // Select tool, move E with F400 feedrate, then reset to normal speed
             var toolCmd = extruderIndex == 0 ? "T0" : "T1";
-            var gcode = $"{toolCmd}\nG91\nG1 E{distance:F2} F300\nG90";
+            var gcode = $"{toolCmd}\nG91\nG1 E{distance:F2} F400\nG1 F3000\nG90";
             await SendGcodeAsync(gcode);
         }
 
