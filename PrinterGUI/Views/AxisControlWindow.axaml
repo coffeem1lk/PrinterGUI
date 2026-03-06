@@ -3,11 +3,11 @@
         xmlns:vm="using:PrinterGUI.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="500"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
         x:Class="PrinterGUI.Views.AxisControlWindow"
         x:DataType="vm:AxisControlViewModel"
         Title="Axis Control"
-        Width="400" Height="500"
+        Width="400" Height="600"
         CanResize="False">
 
   <Design.DataContext>
@@ -74,10 +74,35 @@
           </StackPanel>
         </StackPanel>
 
-        <!-- Home All -->
+        <!-- Home All / Disable Motors -->
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
           <Button Content="Home All (G28)" Command="{Binding HomeAllCommand}" Width="140"/>
           <Button Content="Disable Motors (M84)" Command="{Binding DisableMotorsCommand}" Width="140"/>
+        </StackPanel>
+
+        <!-- Custom G-code Command -->
+        <StackPanel Margin="0,16,0,0">
+          <TextBlock Text="Custom G-code Command" FontWeight="SemiBold" Margin="0,0,0,4"/>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBox Text="{Binding CustomGcode}"
+                     Width="260"
+                     VerticalContentAlignment="Center"/>
+            <Button Content="Send" 
+                    Command="{Binding SendCustomGcodeCommand}" 
+                    Width="80"/>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Response Display -->
+        <StackPanel Margin="0,8,0,0">
+          <TextBlock Text="Printer Response:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+          <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="8" Background="#F5F5F5">
+            <TextBlock Text="{Binding Response}" 
+                       TextWrapping="Wrap" 
+                       FontFamily="Consolas,Courier New"
+                       FontSize="11"
+                       MinHeight="40"/>
+          </Border>
         </StackPanel>
       </StackPanel>
     </ScrollViewer>

@@ -17,6 +17,13 @@ namespace PrinterGUI.ViewModels
         string _status = "Ready";
         public string Status { get => _status; set { _status = value; Notify(nameof(Status)); } }
 
+        string _customGcode = string.Empty;
+        public string CustomGcode { get => _customGcode; set { _customGcode = value; Notify(nameof(CustomGcode)); } }
+
+        // Add a new property for the response
+        string _response = string.Empty;
+        public string Response { get => _response; set { _response = value; Notify(nameof(Response)); } }
+
         public ICommand MoveXCommand { get; }
         public ICommand MoveYCommand { get; }
         public ICommand MoveZCommand { get; }
@@ -24,6 +31,7 @@ namespace PrinterGUI.ViewModels
         public ICommand MoveE1Command { get; }
         public ICommand HomeAllCommand { get; }
         public ICommand DisableMotorsCommand { get; }
+        public ICommand SendCustomGcodeCommand { get; }
 
         public AxisControlViewModel(string serialPort = "/dev/ttyACM0")
         {
@@ -36,6 +44,7 @@ namespace PrinterGUI.ViewModels
             MoveE1Command = new RelayCommand(async p => await MoveExtruderAsync("E", p, extruderIndex: 1));
             HomeAllCommand = new RelayCommand(async _ => await SendGcodeAsync("G28"));
             DisableMotorsCommand = new RelayCommand(async _ => await SendGcodeAsync("M84"));
+            SendCustomGcodeCommand = new RelayCommand(async _ => await SendCustomGcodeAsync());
         }
 
         async Task MoveAxisAsync(string axis, object? distanceObj)
@@ -73,9 +82,25 @@ namespace PrinterGUI.ViewModels
             await SendGcodeAsync(gcode);
         }
 
+        async Task SendCustomGcodeAsync()
+        {
+            if (string.IsNullOrWhiteSpace(CustomGcode))
+            {
+                Status = "Enter a G-code command first";
+                return;
+            }
+
+            var command = CustomGcode.Trim();
+            await SendGcodeAsync(command);
+            // Clear the input after sending
+            CustomGcode = string.Empty;
+        }
+
         async Task SendGcodeAsync(string gcode)
         {
             Status = $"Sending: {gcode.Replace("\n", " | ")}";
+            Response = string.Empty; // Clear previous response
+            
             try
             {
                 using var port = new SerialPort(_serialPort, 115200)
@@ -97,14 +122,25 @@ namespace PrinterGUI.ViewModels
                     await Task.Delay(100); // small delay between commands
                 }
 
-                // Wait for response (best-effort)
+                // Capture response
+                var responseBuilder = new System.Text.StringBuilder();
                 await Task.Delay(300);
                 while (port.BytesToRead > 0)
                 {
-                    try { var resp = port.ReadLine(); Debug.WriteLine(resp); } catch { }
+                    try 
+                    { 
+                        var resp = port.ReadLine();
+                        Debug.WriteLine(resp);
+                        responseBuilder.AppendLine(resp);
+                    } 
+                    catch { }
                 }
 
                 port.Close();
+                
+                Response = responseBuilder.Length > 0 
+                    ? responseBuilder.ToString().Trim() 
+                    : "(no response)";
                 Status = "Command sent successfully";
             }
             catch (Exception ex)
