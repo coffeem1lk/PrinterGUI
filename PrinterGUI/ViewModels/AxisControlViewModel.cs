@@ -106,7 +106,7 @@ namespace PrinterGUI.ViewModels
                 using var port = new SerialPort(_serialPort, 115200)
                 {
                     NewLine = "\n",
-                    ReadTimeout = 2000,
+                    ReadTimeout = 1000, // Increased from 2000 for individual line reads
                     WriteTimeout = 2000,
                     DtrEnable = true,
                     RtsEnable = true
@@ -119,33 +119,63 @@ namespace PrinterGUI.ViewModels
                 {
                     if (string.IsNullOrWhiteSpace(line)) continue;
                     port.WriteLine(line.Trim());
-                    await Task.Delay(100); // small delay between commands
+                    await Task.Delay(50); // Reduced delay between commands
                 }
 
-                // Capture response
+                // Read response lines until we get "ok" or timeout
                 var responseBuilder = new System.Text.StringBuilder();
-                await Task.Delay(300);
-                while (port.BytesToRead > 0)
+                var startTime = DateTime.Now;
+                var maxWaitTime = TimeSpan.FromSeconds(5); // Max 5 seconds to read response
+                bool gotOk = false;
+
+                while ((DateTime.Now - startTime) < maxWaitTime)
                 {
-                    try 
-                    { 
-                        var resp = port.ReadLine();
-                        Debug.WriteLine(resp);
-                        responseBuilder.AppendLine(resp);
-                    } 
-                    catch { }
+                    try
+                    {
+                        // Check if data is available
+                        if (port.BytesToRead > 0)
+                        {
+                            var resp = port.ReadLine().Trim();
+                            Debug.WriteLine(resp);
+                            
+                            if (!string.IsNullOrEmpty(resp))
+                            {
+                                responseBuilder.AppendLine(resp);
+                                
+                                // Check if we got the "ok" response (Marlin sends this after completing commands)
+                                if (resp.Equals("ok", StringComparison.OrdinalIgnoreCase) || 
+                                    resp.StartsWith("ok", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    gotOk = true;
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // No data available, wait a bit before checking again
+                            await Task.Delay(50);
+                        }
+                    }
+                    catch (TimeoutException)
+                    {
+                        // ReadLine timed out, but continue checking if we have time left
+                        await Task.Delay(50);
+                    }
                 }
 
                 port.Close();
                 
                 Response = responseBuilder.Length > 0 
                     ? responseBuilder.ToString().Trim() 
-                    : "(no response)";
-                Status = "Command sent successfully";
+                    : "(no response - check serial port connection)";
+                
+                Status = gotOk ? "Command completed successfully" : "Command sent (no 'ok' received)";
             }
             catch (Exception ex)
             {
                 Status = $"Error: {ex.Message}";
+                Response = $"Error: {ex.Message}";
             }
         }
 

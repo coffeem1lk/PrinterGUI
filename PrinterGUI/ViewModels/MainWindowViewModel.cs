@@ -177,8 +177,8 @@ namespace PrinterGUI.ViewModels
             using var cts = new CancellationTokenSource();
             var progressText = new Progress<string>(s => 
             {
-                // Only show important messages, not every G-code line
-                if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">"))
+                // Only show important messages, not every G-code line or comments
+                if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
                     Status = s;
             });
 
@@ -312,7 +312,12 @@ namespace PrinterGUI.ViewModels
             }
 
             Status = "Opening serial port...";
-            var progText = new Progress<string>(s => Status = s);
+            var progText = new Progress<string>(s => 
+            {
+                // Only show important messages during send, not G-code lines or comments
+                if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
+                    Status = s;
+            });
             var progPercent = new Progress<int>(p => Progress = p);
 
             bool sendSucceeded = false;
