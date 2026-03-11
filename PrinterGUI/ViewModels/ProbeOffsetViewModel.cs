@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Ports;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -31,7 +32,7 @@ namespace PrinterGUI.ViewModels
             { 
                 _canAdjust = value; 
                 Notify(nameof(CanAdjust));
-                Notify(nameof(CanSaveToEeprom)); // Update save button when homing completes
+                Notify(nameof(CanSaveToEeprom));
             } 
         }
 
@@ -43,14 +44,14 @@ namespace PrinterGUI.ViewModels
             { 
                 _hasUnsavedChanges = value; 
                 Notify(nameof(HasUnsavedChanges));
-                Notify(nameof(CanSaveToEeprom)); // Update save button when changes occur
+                Notify(nameof(CanSaveToEeprom));
             } 
         }
 
-        // Save button only enabled after homing AND when there are changes
         public bool CanSaveToEeprom => CanAdjust && HasUnsavedChanges;
 
-        double _zOffsetValue = -4.0;
+        double _currentZPosition = 0.0; // Track cumulative Z position changes
+        const double BaseOffset = -4.0; // The initial offset we start with
 
         public ICommand ResetOffsetCommand { get; }
         public ICommand HomeCommand { get; }
@@ -73,27 +74,42 @@ namespace PrinterGUI.ViewModels
 
             if (!string.IsNullOrEmpty(response))
             {
-                _zOffsetValue = -4.0;
-                CurrentZOffset = $"{_zOffsetValue:F2} mm";
+                CurrentZOffset = $"{BaseOffset:F2} mm";
                 CanHome = true;
                 CanAdjust = false;
-                HasUnsavedChanges = true;
+                HasUnsavedChanges = false;
             }
         }
 
         async Task HomeAsync()
         {
             Status = string.Empty;
-            var response = await SendGcodeAsync("G28", timeoutSeconds: 30); // G28 can take 20-30 seconds
+            var response = await SendGcodeAsync("G28", timeoutSeconds: 30);
 
             if (!string.IsNullOrEmpty(response))
             {
+                // Query current Z position after homing
+                var positionResponse = await SendGcodeAsync("M114");
+                _currentZPosition = ParseZPosition(positionResponse);
+                
                 CanAdjust = true;
+                UpdateCalculatedOffset();
             }
             else
             {
                 Status = "Homing failed or timed out. Try again.";
             }
+        }
+
+        double ParseZPosition(string response)
+        {
+            // Parse M114 response: "X:0.00 Y:0.00 Z:150.00 E:0.00"
+            var match = Regex.Match(response, @"Z:(-?\d+\.?\d*)", RegexOptions.IgnoreCase);
+            if (match.Success && double.TryParse(match.Groups[1].Value, out var z))
+            {
+                return z;
+            }
+            return 0.0; // Fallback if parsing fails
         }
 
         async Task AdjustZAsync(object? adjustmentObj)
@@ -102,20 +118,24 @@ namespace PrinterGUI.ViewModels
                 return;
 
             Status = string.Empty;
-            _zOffsetValue += adjustment;
 
-            var cmd = $"M851 Z{_zOffsetValue:F2}";
-            var response = await SendGcodeAsync(cmd);
+            // Move Z axis physically
+            var moveCmd = $"G91\nG1 Z{adjustment:F2} F400\nG90";
+            var response = await SendGcodeAsync(moveCmd);
 
             if (!string.IsNullOrEmpty(response))
             {
-                CurrentZOffset = $"{_zOffsetValue:F2} mm";
+                _currentZPosition += adjustment;
                 HasUnsavedChanges = true;
+                UpdateCalculatedOffset();
             }
-            else
-            {
-                _zOffsetValue -= adjustment;
-            }
+        }
+
+        void UpdateCalculatedOffset()
+        {
+            // Calculate new offset: base offset (-4) + current Z position
+            double calculatedOffset = BaseOffset + _currentZPosition;
+            CurrentZOffset = $"{calculatedOffset:F2} mm";
         }
 
         async Task SaveToEepromAsync()
@@ -123,12 +143,25 @@ namespace PrinterGUI.ViewModels
             if (!CanSaveToEeprom)
                 return;
 
-            var response = await SendGcodeAsync("M500");
+            // Calculate final offset
+            double finalOffset = BaseOffset + _currentZPosition;
+
+            Status = string.Empty;
+            
+            // Set the calculated offset
+            var setOffsetCmd = $"M851 Z{finalOffset:F2}";
+            var response = await SendGcodeAsync(setOffsetCmd);
 
             if (!string.IsNullOrEmpty(response))
             {
-                HasUnsavedChanges = false;
-                Status = "New offset saved";
+                // Save to EEPROM
+                var saveResponse = await SendGcodeAsync("M500");
+                
+                if (!string.IsNullOrEmpty(saveResponse))
+                {
+                    HasUnsavedChanges = false;
+                    Status = "New offset saved";
+                }
             }
         }
 
@@ -148,8 +181,13 @@ namespace PrinterGUI.ViewModels
                 port.Open();
                 await Task.Delay(500);
 
-                port.WriteLine(gcode.Trim());
-                await Task.Delay(100);
+                // Handle multi-line commands
+                foreach (var line in gcode.Split('\n'))
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    port.WriteLine(line.Trim());
+                    await Task.Delay(50);
+                }
 
                 var responseBuilder = new System.Text.StringBuilder();
                 var startTime = DateTime.Now;
