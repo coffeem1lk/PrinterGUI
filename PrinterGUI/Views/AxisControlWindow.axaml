@@ -3,100 +3,142 @@
         xmlns:vm="using:PrinterGUI.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
         x:Class="PrinterGUI.Views.AxisControlWindow"
         x:DataType="vm:AxisControlViewModel"
         Title="Axis Control"
-        Width="400" Height="600"
+        Width="600" Height="600"
         CanResize="False">
 
   <Design.DataContext>
     <vm:AxisControlViewModel/>
   </Design.DataContext>
 
-  <Grid RowDefinitions="Auto,*,Auto" Margin="12">
-    <TextBlock Grid.Row="0" Text="Manual Axis Control" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/>
+  <Grid RowDefinitions="*,Auto" Margin="12">
 
-    <ScrollViewer Grid.Row="1">
+    <ScrollViewer Grid.Row="0">
       <StackPanel Spacing="16">
-        <!-- X Axis -->
-        <StackPanel>
-          <TextBlock Text="X Axis" FontWeight="SemiBold" Margin="0,0,0,4"/>
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Content="X -10" Command="{Binding MoveXCommand}" CommandParameter="-10" Width="60"/>
-            <Button Content="X -1" Command="{Binding MoveXCommand}" CommandParameter="-1" Width="60"/>
-            <Button Content="X +1" Command="{Binding MoveXCommand}" CommandParameter="1" Width="60"/>
-            <Button Content="X +10" Command="{Binding MoveXCommand}" CommandParameter="10" Width="60"/>
-          </StackPanel>
-        </StackPanel>
+        <!-- Main Control Grid: XY Cross + Z/E0/E1 Columns -->
+        <Grid ColumnDefinitions="Auto,8,Auto" HorizontalAlignment="Center">
+          <!-- XY Cross Control (Left) -->
+          <Grid Grid.Column="0" ColumnDefinitions="60,60,60,60,60" RowDefinitions="45,45,45,45,45">
+            <!-- Y +10 (top) -->
+            <Button Grid.Row="0" Grid.Column="2" 
+                    Content="Y +10" 
+                    Command="{Binding MoveYCommand}" 
+                    CommandParameter="10"
+                    Margin="1"
+                    Width="58"
+                    Height="43"/>
+            
+            <!-- Y +1 -->
+            <Button Grid.Row="1" Grid.Column="2" 
+                    Content="Y +1" 
+                    Command="{Binding MoveYCommand}" 
+                    CommandParameter="1"
+                    Margin="1"
+                    Width="58"
+                    Height="43"/>
+            
+            <!-- X row (middle) -->
+            <Button Grid.Row="2" Grid.Column="0" 
+                    Content="X +10" 
+                    Command="{Binding MoveXCommand}" 
+                    CommandParameter="10"
+                    Margin="1"
+                    Width="58"
+                    Height="43"/>
+            <Button Grid.Row="2" Grid.Column="1" 
+                    Content="X +1" 
+                    Command="{Binding MoveXCommand}" 
+                    CommandParameter="1"
+                    Margin="1"
+                    Width="58"
+                    Height="43"/>
+            <!-- Center space (column 2) -->
+            <Button Grid.Row="2" Grid.Column="3" 
+                    Content="X -1" 
+                    Command="{Binding MoveXCommand}" 
+                    CommandParameter="-1"
+                    Margin="1"
+                    Width="58"
+                    Height="43"/>
+            <Button Grid.Row="2" Grid.Column="4" 
+                    Content="X -10" 
+                    Command="{Binding MoveXCommand}" 
+                    CommandParameter="-10"
+                    Margin="1"
+                    Width="58"
+                    Height="43"/>
+            
+            <!-- Y -1 -->
+            <Button Grid.Row="3" Grid.Column="2" 
+                    Content="Y -1" 
+                    Command="{Binding MoveYCommand}" 
+                    CommandParameter="-1"
+                    Margin="1"
+                    Width="58"
+                    Height="43"/>
+            
+            <!-- Y -10 (bottom) -->
+            <Button Grid.Row="4" Grid.Column="2" 
+                    Content="Y -10" 
+                    Command="{Binding MoveYCommand}" 
+                    CommandParameter="-10"
+                    Margin="1"
+                    Width="58"
+                    Height="43"/>
+          </Grid>
 
-        <!-- Y Axis -->
-        <StackPanel>
-          <TextBlock Text="Y Axis" FontWeight="SemiBold" Margin="0,0,0,4"/>
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Content="Y -10" Command="{Binding MoveYCommand}" CommandParameter="-10" Width="60"/>
-            <Button Content="Y -1" Command="{Binding MoveYCommand}" CommandParameter="-1" Width="60"/>
-            <Button Content="Y +1" Command="{Binding MoveYCommand}" CommandParameter="1" Width="60"/>
-            <Button Content="Y +10" Command="{Binding MoveYCommand}" CommandParameter="10" Width="60"/>
-          </StackPanel>
-        </StackPanel>
-
-        <!-- Z Axis -->
-        <StackPanel>
-          <TextBlock Text="Z Axis" FontWeight="SemiBold" Margin="0,0,0,4"/>
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Content="Z -10" Command="{Binding MoveZCommand}" CommandParameter="-10" Width="60"/>
-            <Button Content="Z -1" Command="{Binding MoveZCommand}" CommandParameter="-1" Width="60"/>
-            <Button Content="Z +1" Command="{Binding MoveZCommand}" CommandParameter="1" Width="60"/>
-            <Button Content="Z +10" Command="{Binding MoveZCommand}" CommandParameter="10" Width="60"/>
-          </StackPanel>
-        </StackPanel>
-
-        <!-- E0 (Extruder 0) -->
-        <StackPanel>
-          <TextBlock Text="E0 (Extruder 0)" FontWeight="SemiBold" Margin="0,0,0,4"/>
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Content="E0 -10" Command="{Binding MoveE0Command}" CommandParameter="-10" Width="60"/>
-            <Button Content="E0 -1" Command="{Binding MoveE0Command}" CommandParameter="-1" Width="60"/>
-            <Button Content="E0 +1" Command="{Binding MoveE0Command}" CommandParameter="1" Width="60"/>
-            <Button Content="E0 +10" Command="{Binding MoveE0Command}" CommandParameter="10" Width="60"/>
-          </StackPanel>
-        </StackPanel>
-
-        <!-- E1 (Extruder 1) -->
-        <StackPanel>
-          <TextBlock Text="E1 (Extruder 1)" FontWeight="SemiBold" Margin="0,0,0,4"/>
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Content="E1 -10" Command="{Binding MoveE1Command}" CommandParameter="-10" Width="60"/>
-            <Button Content="E1 -1" Command="{Binding MoveE1Command}" CommandParameter="-1" Width="60"/>
-            <Button Content="E1 +1" Command="{Binding MoveE1Command}" CommandParameter="1" Width="60"/>
-            <Button Content="E1 +10" Command="{Binding MoveE1Command}" CommandParameter="10" Width="60"/>
-          </StackPanel>
-        </StackPanel>
+          <!-- Z/E0/E1 Columns (Right) - Now with matching row heights -->
+          <Grid Grid.Column="2" ColumnDefinitions="65,8,65,8,65" RowDefinitions="45,45,45,45,45">
+            <!-- Row 0: +10 -->
+            <Button Grid.Row="0" Grid.Column="0" Content="Z +10" Command="{Binding MoveZCommand}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="0" Grid.Column="2" Content="E0 +10" Command="{Binding MoveE0Command}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="0" Grid.Column="4" Content="E1 +10" Command="{Binding MoveE1Command}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
+            
+            <!-- Row 1: +1 (aligned with Y +1) -->
+            <Button Grid.Row="1" Grid.Column="0" Content="Z +1" Command="{Binding MoveZCommand}" CommandParameter="1" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="1" Grid.Column="2" Content="E0 +1" Command="{Binding MoveE0Command}" CommandParameter="1" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="1" Grid.Column="4" Content="E1 +1" Command="{Binding MoveE1Command}" CommandParameter="1" Margin="1" Width="63" Height="43"/>
+            
+            <!-- Row 2: Empty (aligns with X row) -->
+            
+            <!-- Row 3: -1 (aligned with Y -1) -->
+            <Button Grid.Row="3" Grid.Column="0" Content="Z -1" Command="{Binding MoveZCommand}" CommandParameter="-1" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="3" Grid.Column="2" Content="E0 -1" Command="{Binding MoveE0Command}" CommandParameter="-1" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="3" Grid.Column="4" Content="E1 -1" Command="{Binding MoveE1Command}" CommandParameter="-1" Margin="1" Width="63" Height="43"/>
+            
+            <!-- Row 4: -10 -->
+            <Button Grid.Row="4" Grid.Column="0" Content="Z -10" Command="{Binding MoveZCommand}" CommandParameter="-10" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="4" Grid.Column="2" Content="E0 -10" Command="{Binding MoveE0Command}" CommandParameter="-10" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="4" Grid.Column="4" Content="E1 -10" Command="{Binding MoveE1Command}" CommandParameter="-10" Margin="1" Width="63" Height="43"/>
+          </Grid>
+        </Grid>
 
         <!-- Home All / Disable Motors -->
-        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-          <Button Content="Home All (G28)" Command="{Binding HomeAllCommand}" Width="140"/>
-          <Button Content="Disable Motors (M84)" Command="{Binding DisableMotorsCommand}" Width="140"/>
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" HorizontalAlignment="Center">
+          <Button Content="Home All" Command="{Binding HomeAllCommand}" Width="150" Height="40"/>
+          <Button Content="Disable Motors" Command="{Binding DisableMotorsCommand}" Width="150" Height="40"/>
         </StackPanel>
 
         <!-- Custom G-code Command -->
-        <StackPanel Margin="0,16,0,0">
-          <TextBlock Text="Custom G-code Command" FontWeight="SemiBold" Margin="0,0,0,4"/>
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBox Text="{Binding CustomGcode}"
-                     Width="260"
-                     VerticalContentAlignment="Center"/>
-            <Button Content="Send" 
-                    Command="{Binding SendCustomGcodeCommand}" 
-                    Width="80"/>
-          </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,16,0,0" HorizontalAlignment="Center">
+          <TextBlock Text="G-code" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <TextBox Text="{Binding CustomGcode}"
+                   Width="400"
+                   Height="40"
+                   VerticalContentAlignment="Center"/>
+          <Button Content="Send" 
+                  Command="{Binding SendCustomGcodeCommand}" 
+                  Width="100"
+                  Height="40"/>
         </StackPanel>
 
         <!-- Response Display -->
         <StackPanel Margin="0,8,0,0">
-          <TextBlock Text="Printer Response:" FontWeight="SemiBold" Margin="0,0,0,4"/>
-          <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="8" Background="#F5F5F5">
+          <TextBlock Text="Printer Response:" FontWeight="SemiBold" Margin="0,0,0,4" HorizontalAlignment="Center"/>
+          <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="8" Background="#F5F5F5" HorizontalAlignment="Center" Width="500">
             <TextBlock Text="{Binding Response}" 
                        TextWrapping="Wrap" 
                        FontFamily="Consolas,Courier New"
@@ -108,7 +150,7 @@
     </ScrollViewer>
 
     <!-- Status -->
-    <StackPanel Grid.Row="2" Margin="0,12,0,0">
+    <StackPanel Grid.Row="1" Margin="0,12,0,0">
       <TextBlock Text="{Binding Status}" Foreground="Gray" TextWrapping="Wrap" Height="40"/>
       <Button Content="Close" Click="Close_Click" HorizontalAlignment="Right" Margin="0,8,0,0" Width="80"/>
     </StackPanel>
