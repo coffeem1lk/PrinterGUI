@@ -24,10 +24,31 @@ namespace PrinterGUI.ViewModels
         public bool CanHome { get => _canHome; set { _canHome = value; Notify(nameof(CanHome)); } }
 
         bool _canAdjust = false;
-        public bool CanAdjust { get => _canAdjust; set { _canAdjust = value; Notify(nameof(CanAdjust)); } }
+        public bool CanAdjust 
+        { 
+            get => _canAdjust; 
+            set 
+            { 
+                _canAdjust = value; 
+                Notify(nameof(CanAdjust));
+                Notify(nameof(CanSaveToEeprom)); // Update save button when homing completes
+            } 
+        }
 
         bool _hasUnsavedChanges = false;
-        public bool HasUnsavedChanges { get => _hasUnsavedChanges; set { _hasUnsavedChanges = value; Notify(nameof(HasUnsavedChanges)); } }
+        public bool HasUnsavedChanges 
+        { 
+            get => _hasUnsavedChanges; 
+            set 
+            { 
+                _hasUnsavedChanges = value; 
+                Notify(nameof(HasUnsavedChanges));
+                Notify(nameof(CanSaveToEeprom)); // Update save button when changes occur
+            } 
+        }
+
+        // Save button only enabled after homing AND when there are changes
+        public bool CanSaveToEeprom => CanAdjust && HasUnsavedChanges;
 
         double _zOffsetValue = -4.0;
 
@@ -63,11 +84,15 @@ namespace PrinterGUI.ViewModels
         async Task HomeAsync()
         {
             Status = string.Empty;
-            var response = await SendGcodeAsync("G28");
+            var response = await SendGcodeAsync("G28", timeoutSeconds: 30); // G28 can take 20-30 seconds
 
             if (!string.IsNullOrEmpty(response))
             {
                 CanAdjust = true;
+            }
+            else
+            {
+                Status = "Homing failed or timed out. Try again.";
             }
         }
 
@@ -95,7 +120,7 @@ namespace PrinterGUI.ViewModels
 
         async Task SaveToEepromAsync()
         {
-            if (!HasUnsavedChanges)
+            if (!CanSaveToEeprom)
                 return;
 
             var response = await SendGcodeAsync("M500");
@@ -107,7 +132,7 @@ namespace PrinterGUI.ViewModels
             }
         }
 
-        async Task<string> SendGcodeAsync(string gcode)
+        async Task<string> SendGcodeAsync(string gcode, int timeoutSeconds = 5)
         {
             try
             {
@@ -128,7 +153,7 @@ namespace PrinterGUI.ViewModels
 
                 var responseBuilder = new System.Text.StringBuilder();
                 var startTime = DateTime.Now;
-                var maxWait = TimeSpan.FromSeconds(5);
+                var maxWait = TimeSpan.FromSeconds(timeoutSeconds);
                 bool gotOk = false;
 
                 while ((DateTime.Now - startTime) < maxWait)

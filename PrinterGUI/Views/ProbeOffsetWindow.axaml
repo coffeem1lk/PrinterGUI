@@ -84,7 +84,7 @@
       <!-- Save to EEPROM Button -->
       <Button Content="4. Save to EEPROM" 
               Command="{Binding SaveToEepromCommand}"
-              IsEnabled="{Binding HasUnsavedChanges}"
+              IsEnabled="{Binding CanSaveToEeprom}"
               HorizontalAlignment="Center"
               Width="200"
               Height="40"
