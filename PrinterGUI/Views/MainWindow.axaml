@@ -4,12 +4,13 @@
         xmlns:models="using:PrinterGUI.Models"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="480"
+        mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="600"
         x:Class="PrinterGUI.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="PrinterGUI"
-        MinWidth="640" MinHeight="360">
+        Width="1024" Height="600"
+        MinWidth="1024" MinHeight="600">
 
   <Design.DataContext>
     <vm:MainWindowViewModel/>
@@ -61,6 +62,7 @@
               <RowDefinition Height="Auto"/> <!-- Infill / Drying Time -->
               <RowDefinition Height="Auto"/> <!-- Speed / Drying Time RT -->
               <RowDefinition Height="Auto"/> <!-- Serial port (span) -->
+              <RowDefinition Height="Auto"/> <!-- Set Probe Offset button -->
             </Grid.RowDefinitions>
 
             <!-- Layer height -->
@@ -103,6 +105,11 @@
             <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,6,0,0">
               <TextBlock Text="Serial Port" Width="132" VerticalAlignment="Center"/>
               <TextBox Text="{Binding SerialPortPath}" Width="160" Watermark="/dev/ttyUSB0 or /dev/ttyACM0"/>
+            </StackPanel>
+
+            <!-- Set Probe Offset button -->
+            <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0">
+              <Button Content="Set Probe Offset" Click="SetProbeOffset_Click" Width="160"/>
             </StackPanel>
           </Grid>
 

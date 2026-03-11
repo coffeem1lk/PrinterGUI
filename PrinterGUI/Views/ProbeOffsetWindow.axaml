@@ -1,0 +1,107 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PrinterGUI.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="450"
+        x:Class="PrinterGUI.Views.ProbeOffsetWindow"
+        x:DataType="vm:ProbeOffsetViewModel"
+        Title="Set Probe Offset"
+        Width="400" Height="450"
+        CanResize="False">
+
+  <Design.DataContext>
+    <vm:ProbeOffsetViewModel/>
+  </Design.DataContext>
+
+  <Grid RowDefinitions="Auto,*,Auto" Margin="16">
+    <TextBlock Grid.Row="0" Text="Probe Offset Adjustment" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/>
+
+    <StackPanel Grid.Row="1" Spacing="16">
+
+      <!-- Reset Offset Button -->
+      <Button Content="1. Reset Z offset to -4 mm" 
+              Command="{Binding ResetOffsetCommand}" 
+              HorizontalAlignment="Center"
+              Width="200"
+              Height="40"
+              FontWeight="SemiBold"/>
+
+      <!-- Home Button -->
+      <Button Content="2. Home Z" 
+              Command="{Binding HomeCommand}" 
+              IsEnabled="{Binding CanHome}"
+              HorizontalAlignment="Center"
+              Width="200"
+              Height="40"
+              FontWeight="SemiBold"/>
+
+      <!-- Z Adjustment Buttons -->
+      <StackPanel>
+        <TextBlock Text="3. Adjust Z offset (mm)" 
+                   FontWeight="SemiBold" 
+                   Margin="0,0,0,8"
+                   HorizontalAlignment="Center"/>
+        <StackPanel HorizontalAlignment="Center" Spacing="4">
+          <Button Content="+1" 
+                  Command="{Binding AdjustZCommand}" 
+                  CommandParameter="1"
+                  IsEnabled="{Binding CanAdjust}"
+                  Height="30"
+                  Width="50"/>
+          <Button Content="+0.1" 
+                  Command="{Binding AdjustZCommand}" 
+                  CommandParameter="0.1"
+                  IsEnabled="{Binding CanAdjust}"
+                  Height="30"
+                  Width="50"/>
+          <Button Content="-0.1" 
+                  Command="{Binding AdjustZCommand}" 
+                  CommandParameter="-0.1"
+                  IsEnabled="{Binding CanAdjust}"
+                  Height="30"
+                  Width="50"/>
+          <Button Content="-1" 
+                  Command="{Binding AdjustZCommand}" 
+                  CommandParameter="-1"
+                  IsEnabled="{Binding CanAdjust}"
+                  Height="30"
+                  Width="50"/>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- Resulting Offset Display -->
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+        <TextBlock Text="Resulting Z Offset:" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <Border BorderBrush="Gray" BorderThickness="1" Padding="8,6" Background="#F5F5F5" CornerRadius="4">
+          <TextBlock Text="{Binding CurrentZOffset}" 
+                     FontFamily="Consolas" 
+                     FontSize="16"
+                     FontWeight="Bold"/>
+        </Border>
+      </StackPanel>
+
+      <!-- Save to EEPROM Button -->
+      <Button Content="4. Save to EEPROM" 
+              Command="{Binding SaveToEepromCommand}"
+              IsEnabled="{Binding HasUnsavedChanges}"
+              HorizontalAlignment="Center"
+              Width="200"
+              Height="40"
+              FontWeight="SemiBold"
+              Background="Green"
+              Foreground="White"/>
+
+      <!-- Status Bar -->
+      <TextBlock Text="{Binding Status}" 
+                 HorizontalAlignment="Center"
+                 FontSize="12"
+                 Foreground="Green"
+                 FontWeight="SemiBold"/>
+
+    </StackPanel>
+
+    <!-- Close Button -->
+    <Button Grid.Row="2" Content="Close" Click="Close_Click" HorizontalAlignment="Right" Width="80" Margin="0,12,0,0"/>
+  </Grid>
+</Window>

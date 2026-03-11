@@ -40,5 +40,14 @@ namespace PrinterGUI.Views
                 axisWindow.Show();
             }
         }
+
+        private void SetProbeOffset_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm)
+            {
+                var probeWindow = new ProbeOffsetWindow(vm.SerialPortPath);
+                probeWindow.Show();
+            }
+        }
     }
 }
