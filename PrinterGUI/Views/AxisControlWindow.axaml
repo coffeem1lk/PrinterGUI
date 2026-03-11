@@ -90,29 +90,29 @@
                     Height="43"/>
           </Grid>
 
-          <!-- Z/E0/E1 Columns (Right) - Now with matching row heights -->
+          <!-- Z/E0/E1 Columns (Right) - E0/E1 order reversed -->
           <Grid Grid.Column="2" ColumnDefinitions="65,8,65,8,65" RowDefinitions="45,45,45,45,45">
-            <!-- Row 0: +10 -->
+            <!-- Row 0: Z +10, E0 -10, E1 -10 -->
             <Button Grid.Row="0" Grid.Column="0" Content="Z +10" Command="{Binding MoveZCommand}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
-            <Button Grid.Row="0" Grid.Column="2" Content="E0 +10" Command="{Binding MoveE0Command}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
-            <Button Grid.Row="0" Grid.Column="4" Content="E1 +10" Command="{Binding MoveE1Command}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="0" Grid.Column="2" Content="E0 -10" Command="{Binding MoveE0Command}" CommandParameter="-10" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="0" Grid.Column="4" Content="E1 -10" Command="{Binding MoveE1Command}" CommandParameter="-10" Margin="1" Width="63" Height="43"/>
             
-            <!-- Row 1: +1 (aligned with Y +1) -->
+            <!-- Row 1: Z +1, E0 -1, E1 -1 (aligned with Y +1) -->
             <Button Grid.Row="1" Grid.Column="0" Content="Z +1" Command="{Binding MoveZCommand}" CommandParameter="1" Margin="1" Width="63" Height="43"/>
-            <Button Grid.Row="1" Grid.Column="2" Content="E0 +1" Command="{Binding MoveE0Command}" CommandParameter="1" Margin="1" Width="63" Height="43"/>
-            <Button Grid.Row="1" Grid.Column="4" Content="E1 +1" Command="{Binding MoveE1Command}" CommandParameter="1" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="1" Grid.Column="2" Content="E0 -1" Command="{Binding MoveE0Command}" CommandParameter="-1" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="1" Grid.Column="4" Content="E1 -1" Command="{Binding MoveE1Command}" CommandParameter="-1" Margin="1" Width="63" Height="43"/>
             
             <!-- Row 2: Empty (aligns with X row) -->
             
-            <!-- Row 3: -1 (aligned with Y -1) -->
+            <!-- Row 3: Z -1, E0 +1, E1 +1 (aligned with Y -1) -->
             <Button Grid.Row="3" Grid.Column="0" Content="Z -1" Command="{Binding MoveZCommand}" CommandParameter="-1" Margin="1" Width="63" Height="43"/>
-            <Button Grid.Row="3" Grid.Column="2" Content="E0 -1" Command="{Binding MoveE0Command}" CommandParameter="-1" Margin="1" Width="63" Height="43"/>
-            <Button Grid.Row="3" Grid.Column="4" Content="E1 -1" Command="{Binding MoveE1Command}" CommandParameter="-1" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="3" Grid.Column="2" Content="E0 +1" Command="{Binding MoveE0Command}" CommandParameter="1" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="3" Grid.Column="4" Content="E1 +1" Command="{Binding MoveE1Command}" CommandParameter="1" Margin="1" Width="63" Height="43"/>
             
-            <!-- Row 4: -10 -->
+            <!-- Row 4: Z -10, E0 +10, E1 +10 -->
             <Button Grid.Row="4" Grid.Column="0" Content="Z -10" Command="{Binding MoveZCommand}" CommandParameter="-10" Margin="1" Width="63" Height="43"/>
-            <Button Grid.Row="4" Grid.Column="2" Content="E0 -10" Command="{Binding MoveE0Command}" CommandParameter="-10" Margin="1" Width="63" Height="43"/>
-            <Button Grid.Row="4" Grid.Column="4" Content="E1 -10" Command="{Binding MoveE1Command}" CommandParameter="-10" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="4" Grid.Column="2" Content="E0 +10" Command="{Binding MoveE0Command}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="4" Grid.Column="4" Content="E1 +10" Command="{Binding MoveE1Command}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
           </Grid>
         </Grid>
 
