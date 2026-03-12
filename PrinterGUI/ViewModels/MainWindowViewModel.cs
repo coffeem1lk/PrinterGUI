@@ -258,7 +258,12 @@ namespace PrinterGUI.ViewModels
             Progress = 0;
             Status = "Slicing (PrusaSlicer) before send...";
 
-            var slicerProgress = new Progress<string>(s => Status = s);
+            var slicerProgress = new Progress<string>(s => 
+            {
+                // Only show important messages, not every G-code line or comments
+                if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
+                    Status = s;
+            });
             try
             {
                 // ensure dryingTime is passed in the correct position (7th parameter) and printSpeed stays double
@@ -314,7 +319,7 @@ namespace PrinterGUI.ViewModels
             Status = "Opening serial port...";
             var progText = new Progress<string>(s => 
             {
-                // Only show important messages during send, not G-code lines or comments
+                // Only show important messages during send
                 if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
                     Status = s;
             });
@@ -336,6 +341,28 @@ namespace PrinterGUI.ViewModels
                 IsSending = false;
                 _cts?.Dispose();
                 _cts = null;
+
+                // Save copy to /home/raspberrypie/gcode/ before deleting temp file
+                if (sendSucceeded && File.Exists(tempPath))
+                {
+                    try
+                    {
+                        string gcodeFolder = "/home/raspberrypie/gcode";
+                        Directory.CreateDirectory(gcodeFolder); // Ensure folder exists
+                        
+                        string modelName = Path.GetFileNameWithoutExtension(stlPath);
+                        string copyPath = Path.Combine(gcodeFolder, $"{modelName}_{DateTime.Now:yyyyMMdd_HHmmss}.gcode");
+                        
+                        File.Copy(tempPath, copyPath, overwrite: true);
+                        Status = $"Send complete. G-code saved to {copyPath}";
+                    }
+                    catch (Exception ex)
+                    {
+                        // Don't fail the whole operation if copy fails
+                        Status = $"Send complete (copy failed: {ex.Message})";
+                    }
+                }
+
                 try { File.Delete(tempPath); } catch { }
 
                 if (sendSucceeded)
