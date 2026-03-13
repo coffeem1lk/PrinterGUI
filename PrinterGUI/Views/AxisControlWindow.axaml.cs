@@ -41,6 +41,10 @@ namespace PrinterGUI.Views
                     if (e.Source is not TextBox)
                     {
                         GcodeKeyboardPopup.IsOpen = false;
+                        
+                        // Explicitly take focus to the Window itself to un-focus the TextBox visually
+                        this.Focus();
+                        TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
                     }
                 }
             }

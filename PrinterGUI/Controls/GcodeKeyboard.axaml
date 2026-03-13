@@ -2,7 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="PrinterGUI.Controls.GcodeKeyboard">
   
-  <Border Background="#2A2A2A" Padding="8" CornerRadius="4">
+    <UserControl.Styles>
+        <!-- Prevent keyboard keys from stealing focus so the TextBox keeps it -->
+        <Style Selector="Button">
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Border Background="#2A2A2A" Padding="8" CornerRadius="4">
     <Grid ColumnDefinitions="48,8,48,8,48,16,48,8,48,8,48" 
           RowDefinitions="48,8,48,8,48,8,48" 
           HorizontalAlignment="Center">
