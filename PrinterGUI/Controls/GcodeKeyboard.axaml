@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PrinterGUI.Controls.GcodeKeyboard">
+  
+  <Border Background="#2A2A2A" Padding="8" CornerRadius="4">
+    <Grid ColumnDefinitions="48,8,48,8,48,16,48,8,48,8,48" 
+          RowDefinitions="48,8,48,8,48,8,48" 
+          HorizontalAlignment="Center">
+      
+      <!-- Left Section: Letters -->
+      <!-- Row 0: G, M, X -->
+      <Button Grid.Row="0" Grid.Column="0" Content="G" Click="Character_Click" Height="48" Width="48" FontSize="18"/>
+      <Button Grid.Row="0" Grid.Column="2" Content="M" Click="Character_Click" Height="48" Width="48" FontSize="18"/>
+      <Button Grid.Row="0" Grid.Column="4" Content="X" Click="Character_Click" Height="48" Width="48" FontSize="18"/>
+      
+      <!-- Row 2: Y, Z, E -->
+      <Button Grid.Row="2" Grid.Column="0" Content="Y" Click="Character_Click" Height="48" Width="48" FontSize="18"/>
+      <Button Grid.Row="2" Grid.Column="2" Content="Z" Click="Character_Click" Height="48" Width="48" FontSize="18"/>
+      <Button Grid.Row="2" Grid.Column="4" Content="E" Click="Character_Click" Height="48" Width="48" FontSize="18"/>
+      
+      <!-- Row 6: Enter spanning 5 columns (3 buttons + 2 gaps) -->
+      <Button Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="5" Content="⏎ Enter" Click="Enter_Click" Height="48" FontSize="18" Background="#4A90E2" Foreground="White"/>
+      
+      <!-- Right Section: Numbers -->
+      <!-- Row 0: 1, 2, 3 -->
+      <Button Grid.Row="0" Grid.Column="6" Content="1" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
+      <Button Grid.Row="0" Grid.Column="8" Content="2" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
+      <Button Grid.Row="0" Grid.Column="10" Content="3" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
+      
+      <!-- Row 2: 4, 5, 6 -->
+      <Button Grid.Row="2" Grid.Column="6" Content="4" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
+      <Button Grid.Row="2" Grid.Column="8" Content="5" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
+      <Button Grid.Row="2" Grid.Column="10" Content="6" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
+      
+      <!-- Row 4: 7, 8, 9 -->
+      <Button Grid.Row="4" Grid.Column="6" Content="7" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
+      <Button Grid.Row="4" Grid.Column="8" Content="8" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
+      <Button Grid.Row="4" Grid.Column="10" Content="9" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
+      
+      <!-- Row 6: -, 0, . -->
+      <Button Grid.Row="6" Grid.Column="6" Content="-" Click="Character_Click" Height="48" Width="48" FontSize="18"/>
+      <Button Grid.Row="6" Grid.Column="8" Content="0" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
+      <Button Grid.Row="6" Grid.Column="10" Content="." Click="Character_Click" Height="48" Width="48" FontSize="18"/>
+      
+    </Grid>
+  </Border>
+</UserControl>

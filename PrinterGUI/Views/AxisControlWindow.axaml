@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PrinterGUI.ViewModels"
+        xmlns:controls="using:PrinterGUI.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
@@ -125,10 +126,13 @@
         <!-- Custom G-code Command -->
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,16,0,0" HorizontalAlignment="Center">
           <TextBlock Text="G-code" FontWeight="SemiBold" VerticalAlignment="Center"/>
-          <TextBox Text="{Binding CustomGcode}"
+          <TextBox x:Name="CustomGcodeTextBox"
+                   Text="{Binding CustomGcode}"
                    Width="400"
                    Height="40"
-                   VerticalContentAlignment="Center"/>
+                   VerticalContentAlignment="Center"
+                   GotFocus="TextBox_GotFocus" 
+                   LostFocus="TextBox_LostFocus"/>
           <Button Content="Send" 
                   Command="{Binding SendCustomGcodeCommand}" 
                   Width="100"
@@ -154,5 +158,13 @@
       <TextBlock Text="{Binding Status}" Foreground="Gray" TextWrapping="Wrap" Height="40"/>
       <Button Content="Close" Click="Close_Click" HorizontalAlignment="Right" Margin="0,8,0,0" Width="80"/>
     </StackPanel>
+
+    <!-- Floating G-code Keyboard Popup -->
+    <Popup x:Name="GcodeKeyboardPopup" 
+           IsOpen="False" 
+           Placement="Bottom"
+           PlacementTarget="{Binding #CustomGcodeTextBox}">
+      <controls:GcodeKeyboard x:Name="GcodeKeyboard"/>
+    </Popup>
   </Grid>
 </Window>

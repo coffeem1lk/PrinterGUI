@@ -258,12 +258,12 @@ namespace PrinterGUI.ViewModels
             Progress = 0;
             Status = "Slicing (PrusaSlicer) before send...";
 
-            var slicerProgress = new Progress<string>(s => 
+            var slicerProgress = new Progress<string>(s =>
             {
-                // Only show important messages, not every G-code line or comments
                 if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
                     Status = s;
             });
+
             try
             {
                 // ensure dryingTime is passed in the correct position (7th parameter) and printSpeed stays double
@@ -306,6 +306,38 @@ namespace PrinterGUI.ViewModels
                     IsSending = false;
                     return;
                 }
+
+                // Save copy to /home/raspberrypie/gcode/ immediately after successful slicing
+                try
+                {
+                    string gcodeFolder = "/home/raspberrypie/gcode";
+
+                    // Ensure folder exists
+                    if (!Directory.Exists(gcodeFolder))
+                    {
+                        Directory.CreateDirectory(gcodeFolder);
+                    }
+
+                    string modelName = Path.GetFileNameWithoutExtension(stlPath);
+                    string copyPath = Path.Combine(gcodeFolder, $"{modelName}_{DateTime.Now:yyyyMMdd_HHmmss}.gcode");
+
+                    File.Copy(tempPath, copyPath, overwrite: true);
+
+                    // Update status on UI thread
+                    _uiContext?.Post(_ =>
+                    {
+                        Status = $"G-code saved: {Path.GetFileName(copyPath)}. Starting send...";
+                    }, null);
+                }
+                catch (Exception ex)
+                {
+                    // Don't fail the operation if copy fails, but log it
+                    _uiContext?.Post(_ =>
+                    {
+                        Status = $"Warning: G-code copy failed ({ex.Message}). Continuing with send...";
+                    }, null);
+                    await Task.Delay(1000); // Brief pause so user can see the warning
+                }
             }
             catch (Exception ex)
             {
@@ -317,7 +349,7 @@ namespace PrinterGUI.ViewModels
             }
 
             Status = "Opening serial port...";
-            var progText = new Progress<string>(s => 
+            var progText = new Progress<string>(s =>
             {
                 // Only show important messages during send
                 if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
@@ -342,33 +374,12 @@ namespace PrinterGUI.ViewModels
                 _cts?.Dispose();
                 _cts = null;
 
-                // Save copy to /home/raspberrypie/gcode/ before deleting temp file
-                if (sendSucceeded && File.Exists(tempPath))
-                {
-                    try
-                    {
-                        string gcodeFolder = "/home/raspberrypie/gcode";
-                        Directory.CreateDirectory(gcodeFolder); // Ensure folder exists
-                        
-                        string modelName = Path.GetFileNameWithoutExtension(stlPath);
-                        string copyPath = Path.Combine(gcodeFolder, $"{modelName}_{DateTime.Now:yyyyMMdd_HHmmss}.gcode");
-                        
-                        File.Copy(tempPath, copyPath, overwrite: true);
-                        Status = $"Send complete. G-code saved to {copyPath}";
-                    }
-                    catch (Exception ex)
-                    {
-                        // Don't fail the whole operation if copy fails
-                        Status = $"Send complete (copy failed: {ex.Message})";
-                    }
-                }
-
+                // Delete temp file
                 try { File.Delete(tempPath); } catch { }
 
                 if (sendSucceeded)
                 {
-                    // Clean up older generated files for the same model (created by previous "Generate Gcode" runs).
-                    // Runs off the UI thread and reports a short status update when done.
+                    // Clean up older generated files for the same model
                     _ = Task.Run(async () =>
                     {
                         await DeleteOldGeneratedFilesAsync(stlPath).ConfigureAwait(false);
@@ -494,6 +505,55 @@ namespace PrinterGUI.ViewModels
             catch
             {
                 // ignore
+            }
+        }
+
+        async Task CleanupGcodeArchiveAsync()
+        {
+            try
+            {
+                string gcodeFolder = "/home/raspberrypie/gcode";
+                
+                if (!Directory.Exists(gcodeFolder))
+                    return;
+
+                // Get all .gcode files
+                var files = Directory.GetFiles(gcodeFolder, "*.gcode", SearchOption.TopDirectoryOnly);
+                
+                if (files.Length <= 100)
+                    return; // Nothing to delete
+
+                // Sort by last write time (most recent first)
+                var sorted = files
+                    .Select(f => new { Path = f, Time = File.GetLastWriteTimeUtc(f) })
+                    .OrderByDescending(x => x.Time)
+                    .ToList();
+
+                // Keep the 50 most recent, delete the rest
+                var toDelete = sorted.Skip(100).Select(x => x.Path).ToList();
+
+                int deletedCount = 0;
+                foreach (var file in toDelete)
+                {
+                    try
+                    {
+                        File.Delete(file);
+                        deletedCount++;
+                    }
+                    catch { /* best-effort */ }
+                }
+
+                if (deletedCount > 0)
+                {
+                    _uiContext?.Post(_ =>
+                    {
+                        Status = $"Archived G-code. Cleaned up {deletedCount} old file(s)";
+                    }, null);
+                }
+            }
+            catch
+            {
+                // ignore errors
             }
         }
 

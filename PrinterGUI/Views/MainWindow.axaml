@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PrinterGUI.ViewModels"
         xmlns:models="using:PrinterGUI.Models"
+        xmlns:controls="using:PrinterGUI.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="600"
@@ -26,7 +27,7 @@
     <Border Grid.Row="1" Padding="8">
       <Grid>
         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="1.1*"/>
+          <ColumnDefinition Width="0.77*"/>
           <ColumnDefinition Width="1.5*"/>
         </Grid.ColumnDefinitions>
 
@@ -68,37 +69,43 @@
             <!-- Layer height -->
             <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
               <TextBlock Text="Layer Height (mm)" Width="132" VerticalAlignment="Center"/>
-              <TextBox Text="{Binding LayerHeight}" Width="60"/>
+              <TextBox x:Name="LayerHeightTextBox" Text="{Binding LayerHeight}" Width="60" 
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
             <!-- Drying Temp -->
-            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="-20,0,0,6">
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
               <TextBlock Text="Drying Temp (&#176;C)" Width="132" VerticalAlignment="Center"/>
-              <TextBox Text="{Binding DryingTemp}" Width="60"/>
+              <TextBox x:Name="DryingTempTextBox" Text="{Binding DryingTemp}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
             <!-- Infill -->
             <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
               <TextBlock Text="Infill Density (%)" Width="132" VerticalAlignment="Center"/>
-              <TextBox Text="{Binding Infill}" Width="60"/>
+              <TextBox x:Name="InfillTextBox" Text="{Binding Infill}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
             <!-- Drying time -->
-            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="-20,0,0,6">
+            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
               <TextBlock Text="Drying Time (min)" Width="132" VerticalAlignment="Center"/>
-              <TextBox Text="{Binding DryingTime}" Width="60"/>
+              <TextBox x:Name="DryingTimeTextBox" Text="{Binding DryingTime}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
             <!-- Print speed -->
             <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
               <TextBlock Text="Print Speed (mm/s)" Width="132" VerticalAlignment="Center"/>
-              <TextBox Text="{Binding PrintSpeed}" Width="60"/>
+              <TextBox x:Name="PrintSpeedTextBox" Text="{Binding PrintSpeed}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
             <!-- Drying time RT -->
-            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="-20,0,0,6">
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
               <TextBlock Text="Drying Time RT (min)" Width="132" VerticalAlignment="Center"/>
-              <TextBox Text="{Binding DryingTimeRT}" Width="60"/>
+              <TextBox x:Name="DryingTimeRTTextBox" Text="{Binding DryingTimeRT}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
             <!-- Serial Port spans both columns and keeps original wider textbox -->
@@ -125,6 +132,14 @@
         </StackPanel>
       </Grid>
     </Border>
+
+    <!-- Floating Numeric Keyboard Popup -->
+    <Popup x:Name="KeyboardPopup" 
+           IsOpen="False" 
+           Placement="Right"
+           PlacementTarget="{Binding #LayerHeightTextBox}">
+      <controls:NumericKeyboard x:Name="NumericKeyboard"/>
+    </Popup>
 
     <!-- Footer / credits -->
     <Border Grid.Row="2" Background="#111" Padding="8">
