@@ -32,7 +32,9 @@ namespace PrinterGUI.Views
                     if (e.Source is not TextBox)
                     {
                         KeyboardPopup.IsOpen = false;
-                        // Clear focus from the textbox so clicking it again triggers GotFocus
+                        
+                        // Explicitly take focus to the Window itself to un-focus the TextBox visually
+                        this.Focus();
                         TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
                     }
                 }
