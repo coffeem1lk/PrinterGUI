@@ -20,13 +20,16 @@ namespace PrinterGUI.Views
         private void Window_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
             // Close keyboard if click is outside the keyboard and not on a textbox
-            if (KeyboardPopup != null && KeyboardPopup.IsOpen)
+            if (KeyboardPopup != null && KeyboardPopup.IsOpen && KeyboardPopup.Child != null)
             {
                 var point = e.GetPosition(KeyboardPopup.Child);
-                var keyboardBounds = KeyboardPopup.Child?.Bounds;
+                var bounds = KeyboardPopup.Child.Bounds;
+                
+                // Create a rectangle representing the local coordinate size of the keyboard (starting at 0,0)
+                var localInternalRect = new Avalonia.Rect(0, 0, bounds.Width, bounds.Height);
                 
                 // Check if click is outside keyboard
-                if (keyboardBounds.HasValue && !keyboardBounds.Value.Contains(point))
+                if (!localInternalRect.Contains(point))
                 {
                     // Check if click is not on a textbox
                     if (e.Source is not TextBox)
