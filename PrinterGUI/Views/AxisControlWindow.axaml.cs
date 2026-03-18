@@ -8,6 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Controls.Primitives;
 using PrinterGUI.ViewModels;
+using Avalonia.VisualTree; // Required to check the UI tree
 
 namespace PrinterGUI.Views
 {
@@ -29,26 +30,25 @@ namespace PrinterGUI.Views
         private void Window_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
             // Close keyboard if click is outside the keyboard and not on the textbox
-            if (GcodeKeyboardPopup != null && GcodeKeyboardPopup.IsOpen && GcodeKeyboardPopup.Child != null)
+            if (GcodeKeyboardPopup != null && GcodeKeyboardPopup.IsOpen)
             {
-                var point = e.GetPosition(GcodeKeyboardPopup.Child);
-                var bounds = GcodeKeyboardPopup.Child.Bounds;
+                bool isInsideKeyboard = false;
                 
-                // Create a rectangle representing the local coordinate size of the keyboard (starting at 0,0)
-                var localInternalRect = new Avalonia.Rect(0, 0, bounds.Width, bounds.Height);
-                
-                // Check if click is outside keyboard
-                if (!localInternalRect.Contains(point))
+                // Reliably check if the clicked UI element is part of the keyboard layout
+                if (e.Source is Avalonia.Visual sourceVisual && GcodeKeyboardPopup.Child is Avalonia.Visual targetVisual)
                 {
-                    // Check if click is not on the textbox
-                    if (e.Source is not TextBox)
-                    {
-                        GcodeKeyboardPopup.IsOpen = false;
-                        
-                        // Explicitly take focus to the Window itself to un-focus the TextBox visually
-                        this.Focus();
-                        TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
-                    }
+                    isInsideKeyboard = sourceVisual == targetVisual || 
+                                       sourceVisual.GetVisualAncestors().Any(v => v == targetVisual);
+                }
+                
+                // Check if click is outside keyboard and not on a textbox
+                if (!isInsideKeyboard && e.Source is not TextBox)
+                {
+                    GcodeKeyboardPopup.IsOpen = false;
+                    
+                    // Explicitly take focus to the Window itself to un-focus the TextBox visually
+                    this.Focus();
+                    TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
                 }
             }
         }

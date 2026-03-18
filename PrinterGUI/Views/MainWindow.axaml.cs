@@ -4,6 +4,8 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using PrinterGUI.ViewModels;
 using System.Threading.Tasks;
+using System.Linq;
+using Avalonia.VisualTree; // Required to check the UI tree
 
 namespace PrinterGUI.Views
 {
@@ -20,26 +22,25 @@ namespace PrinterGUI.Views
         private void Window_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
             // Close keyboard if click is outside the keyboard and not on a textbox
-            if (KeyboardPopup != null && KeyboardPopup.IsOpen && KeyboardPopup.Child != null)
+            if (KeyboardPopup != null && KeyboardPopup.IsOpen)
             {
-                var point = e.GetPosition(KeyboardPopup.Child);
-                var bounds = KeyboardPopup.Child.Bounds;
-                
-                // Create a rectangle representing the local coordinate size of the keyboard (starting at 0,0)
-                var localInternalRect = new Avalonia.Rect(0, 0, bounds.Width, bounds.Height);
-                
-                // Check if click is outside keyboard
-                if (!localInternalRect.Contains(point))
+                bool isInsideKeyboard = false;
+
+                // Reliably check if the clicked UI element is part of the keyboard layout
+                if (e.Source is Avalonia.Visual sourceVisual && KeyboardPopup.Child is Avalonia.Visual targetVisual)
                 {
-                    // Check if click is not on a textbox
-                    if (e.Source is not TextBox)
-                    {
-                        KeyboardPopup.IsOpen = false;
-                        
-                        // Explicitly take focus to the Window itself to un-focus the TextBox visually
-                        this.Focus();
-                        TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
-                    }
+                    isInsideKeyboard = sourceVisual == targetVisual || 
+                                       sourceVisual.GetVisualAncestors().Any(v => v == targetVisual);
+                }
+                
+                // Check if click is outside keyboard and not on a textbox
+                if (!isInsideKeyboard && e.Source is not TextBox)
+                {
+                    KeyboardPopup.IsOpen = false;
+                    
+                    // Explicitly take focus to the Window itself to un-focus the TextBox visually
+                    this.Focus();
+                    TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
                 }
             }
         }
@@ -90,8 +91,10 @@ namespace PrinterGUI.Views
                 double textBoxHeight = textBox.Bounds.Height;
                 double keyboardHeight = NumericKeyboard.Bounds.Height;
                 
+                // If keyboard hasn't been measured yet, use estimated height
                 if (keyboardHeight == 0)
                 {
+                    // 4 rows of 48px buttons + 3 gaps of 8px + 16px padding = 232px
                     keyboardHeight = 232;
                 }
                 
