@@ -65,6 +65,9 @@ namespace PrinterGUI.Views
                 GcodeKeyboardPopup.HorizontalOffset = 0;
                 GcodeKeyboardPopup.VerticalOffset = 5;
                 
+                // Signal the keyboard to overwrite the textbox contents on the next key press
+                GcodeKeyboard.OverwriteNextInput = true;
+                
                 // Show keyboard
                 GcodeKeyboardPopup.IsOpen = true;
             }

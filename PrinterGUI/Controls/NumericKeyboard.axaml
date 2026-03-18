@@ -10,7 +10,8 @@
   </UserControl.Styles>
 
   <Border Background="#2A2A2A" Padding="8" CornerRadius="4">
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*,*" ColumnSpacing="8" RowSpacing="8">
+    <!-- Updated row definitions to fit the new layout -->
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,*,*" ColumnSpacing="8" RowSpacing="8">
       
       <!-- Row 0: 1, 2, 3 -->
       <Button Grid.Row="0" Grid.Column="0" Content="1" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
@@ -27,10 +28,14 @@
       <Button Grid.Row="2" Grid.Column="1" Content="8" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
       <Button Grid.Row="2" Grid.Column="2" Content="9" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
       
-      <!-- Row 3: ., 0, Enter -->
+      <!-- Row 3: ., 0, Del -->
       <Button Grid.Row="3" Grid.Column="0" Content="." Click="Decimal_Click" Height="48" Width="48" FontSize="18"/>
       <Button Grid.Row="3" Grid.Column="1" Content="0" Click="Number_Click" Height="48" Width="48" FontSize="18"/>
-      <Button Grid.Row="3" Grid.Column="2" Content="⏎" Click="Enter_Click" Height="48" Width="48" FontSize="18" Background="#4A90E2" Foreground="White"/>
+      <!-- Del takes the spot of the old square Enter -->
+      <Button Grid.Row="3" Grid.Column="2" Content="⌫" Click="Del_Click" Height="48" Width="48" FontSize="18" Background="#E24A4A" Foreground="White"/>
+      
+      <!-- Row 4: Wide Enter across bottom -->
+      <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Content="⏎ Enter" Click="Enter_Click" Height="48" FontSize="18" Background="#4A90E2" Foreground="White"/>
       
     </Grid>
   </Border>

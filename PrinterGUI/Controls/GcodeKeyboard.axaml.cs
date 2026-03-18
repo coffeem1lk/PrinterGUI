@@ -12,6 +12,9 @@ namespace PrinterGUI.Controls
 {
     public partial class GcodeKeyboard : UserControl
     {
+        // Tracks if the next input should overwrite the existing textbox content
+        public bool OverwriteNextInput { get; set; }
+
         public GcodeKeyboard()
         {
             InitializeComponent();
@@ -33,14 +36,42 @@ namespace PrinterGUI.Controls
             }
         }
 
+        private void Space_Click(object? sender, RoutedEventArgs e)
+        {
+            InsertText(" ");
+        }
+
+        private void Del_Click(object? sender, RoutedEventArgs e)
+        {
+            var topLevel = TopLevel.GetTopLevel(this);
+            var focused = topLevel?.FocusManager?.GetFocusedElement();
+            
+            if (focused is TextBox textBox && !string.IsNullOrEmpty(textBox.Text))
+            {
+                if (OverwriteNextInput)
+                {
+                    // Clear the whole box if it's the first deletion after clicking
+                    textBox.Text = string.Empty;
+                    textBox.CaretIndex = 0;
+                    OverwriteNextInput = false;
+                }
+                else
+                {
+                    int caretIndex = textBox.CaretIndex;
+                    if (caretIndex > 0)
+                    {
+                        textBox.Text = textBox.Text.Remove(caretIndex - 1, 1);
+                        textBox.CaretIndex = caretIndex - 1;
+                    }
+                }
+            }
+        }
+
         private void Enter_Click(object? sender, RoutedEventArgs e)
         {
-            // Move focus to next control
+            // Clear focus to make the keyboard disappear
             var topLevel = TopLevel.GetTopLevel(this);
-            if (topLevel?.FocusManager?.GetFocusedElement() is Control focused)
-            {
-                KeyboardNavigationHandler.GetNext(focused, NavigationDirection.Next)?.Focus();
-            }
+            topLevel?.FocusManager?.ClearFocus();
         }
 
         private void InsertText(string text)
@@ -50,13 +81,23 @@ namespace PrinterGUI.Controls
             
             if (focused is TextBox textBox)
             {
-                int caretIndex = textBox.CaretIndex;
-                string currentText = textBox.Text ?? string.Empty;
-                
-                // Insert text at caret position
-                string newText = currentText.Insert(caretIndex, text);
-                textBox.Text = newText;
-                textBox.CaretIndex = caretIndex + text.Length;
+                if (OverwriteNextInput)
+                {
+                    // Replace all text with the new input
+                    textBox.Text = text;
+                    textBox.CaretIndex = text.Length;
+                    OverwriteNextInput = false;
+                }
+                else
+                {
+                    int caretIndex = textBox.CaretIndex;
+                    string currentText = textBox.Text ?? string.Empty;
+                    
+                    // Insert text at caret position
+                    string newText = currentText.Insert(caretIndex, text);
+                    textBox.Text = newText;
+                    textBox.CaretIndex = caretIndex + text.Length;
+                }
             }
         }
     }

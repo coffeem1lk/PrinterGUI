@@ -84,18 +84,18 @@ namespace PrinterGUI.Views
                 
                 // Calculate vertical offset to align top borders
                 // By default, centers are aligned. To align tops, shift DOWN.
-                // Offset = (keyboardHeight - textboxHeight) / 2
                 double textBoxHeight = textBox.Bounds.Height;
                 double keyboardHeight = NumericKeyboard.Bounds.Height;
                 
-                // If keyboard hasn't been measured yet, use estimated height
                 if (keyboardHeight == 0)
                 {
-                    // 4 rows of 48px buttons + 3 gaps of 8px + 16px padding = 232px
                     keyboardHeight = 232;
                 }
                 
                 KeyboardPopup.VerticalOffset = (keyboardHeight - textBoxHeight) / 2;
+                
+                // Signal the keyboard to overwrite the textbox contents on the next key press
+                NumericKeyboard.OverwriteNextInput = true;
                 
                 // Show keyboard
                 KeyboardPopup.IsOpen = true;
