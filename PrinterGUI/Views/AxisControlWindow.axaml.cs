@@ -25,6 +25,17 @@ namespace PrinterGUI.Views
             
             // Close keyboard when clicking outside
             this.AddHandler(PointerPressedEvent, Window_PointerPressed, RoutingStrategies.Tunnel);
+
+            // Listen for the Enter pressed event so we can close the keyboard
+            if (GcodeKeyboard != null)
+            {
+                GcodeKeyboard.EnterPressed += (s, e) => 
+                {
+                    if (GcodeKeyboardPopup != null) GcodeKeyboardPopup.IsOpen = false;
+                    this.Focus();
+                    TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
+                };
+            }
         }
 
         private void Window_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -78,22 +89,11 @@ namespace PrinterGUI.Views
 
         private void TextBox_LostFocus(object? sender, RoutedEventArgs e)
         {
-            // Hide keyboard after a short delay to allow clicking keyboard buttons
-            Task.Delay(200).ContinueWith(_ =>
-            {
-                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                {
-                    // Only hide if the textbox no longer has focus
-                    var topLevel = TopLevel.GetTopLevel(this);
-                    if (topLevel?.FocusManager?.GetFocusedElement() is not TextBox)
-                    {
-                        if (GcodeKeyboardPopup != null)
-                        {
-                            GcodeKeyboardPopup.IsOpen = false;
-                        }
-                    }
-                });
-            });
+            // Intentionally left blank. 
+            // On touch devices (like Linux/Raspberry Pi), Popups are separate windows and 
+            // can temporarily steal focus during a touch gesture, which would cause the keyboard 
+            // to spontaneously disappear if we hid it here.
+            // Hiding the keyboard is fully handled by Window_PointerPressed when clicking off the keyboard.
         }
     }
 }

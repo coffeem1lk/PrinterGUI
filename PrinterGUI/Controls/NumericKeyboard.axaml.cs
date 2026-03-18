@@ -15,6 +15,9 @@ namespace PrinterGUI.Controls
         // Tracks if the next input should overwrite the existing textbox content
         public bool OverwriteNextInput { get; set; }
 
+        // Event to signal the parent that Enter was pressed
+        public event EventHandler? EnterPressed;
+
         public NumericKeyboard()
         {
             InitializeComponent();
@@ -61,9 +64,7 @@ namespace PrinterGUI.Controls
 
         private void Enter_Click(object? sender, RoutedEventArgs e)
         {
-            // Clear focus to make the keyboard disappear
-            var topLevel = TopLevel.GetTopLevel(this);
-            topLevel?.FocusManager?.ClearFocus();
+            EnterPressed?.Invoke(this, EventArgs.Empty);
         }
 
         private void InsertText(string text)

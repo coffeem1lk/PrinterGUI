@@ -6,10 +6,13 @@
       <!-- Prevent keyboard keys from stealing focus so the TextBox keeps it -->
       <Style Selector="Button">
           <Setter Property="Focusable" Value="False"/>
+          <Setter Property="Background" Value="#E0E0E0"/> <!-- Slightly darker light grey for keys -->
+          <Setter Property="Foreground" Value="Black"/>   <!-- Black text for keys -->
       </Style>
   </UserControl.Styles>
 
-  <Border Background="#2A2A2A" Padding="8" CornerRadius="4">
+  <!-- Main background color changed to a very light grey -->
+  <Border Background="#F5F5F5" Padding="8" CornerRadius="4" BorderBrush="#D0D0D0" BorderThickness="1">
     <!-- Updated row definitions to fit the new layout -->
     <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,*,*" ColumnSpacing="8" RowSpacing="8">
       
