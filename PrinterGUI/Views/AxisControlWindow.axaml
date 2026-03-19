@@ -81,12 +81,12 @@
       <Button Content="Close" Click="Close_Click" HorizontalAlignment="Right" Margin="0,8,0,0" Width="80"/>
     </StackPanel>
 
-    <!-- Overlay keyboard (Microfluidics-style) -->
+    <!-- Floating overlay keyboard (does NOT affect layout size) -->
     <controls:GcodeKeyboard x:Name="GcodeKeyboard"
                             IsVisible="False"
                             Grid.RowSpan="2"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Bottom"
-                            Margin="0,0,0,8"/>
+                            Margin="0,0,0,260"/>
   </Grid>
 </Window>
