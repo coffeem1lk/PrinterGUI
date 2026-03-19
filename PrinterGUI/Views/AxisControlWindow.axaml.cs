@@ -8,7 +8,8 @@ using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Controls.Primitives;
 using PrinterGUI.ViewModels;
-using Avalonia.VisualTree; // Required to check the UI tree
+using Avalonia.VisualTree; 
+using Avalonia.LogicalTree; // Required for logical hierarchy checks
 
 namespace PrinterGUI.Views
 {
@@ -48,8 +49,29 @@ namespace PrinterGUI.Views
                 // Reliably check if the clicked UI element is part of the keyboard layout
                 if (e.Source is Avalonia.Visual sourceVisual && GcodeKeyboardPopup.Child is Avalonia.Visual targetVisual)
                 {
-                    isInsideKeyboard = sourceVisual == targetVisual || 
-                                       sourceVisual.GetVisualAncestors().Any(v => v == targetVisual);
+                    var mainLevel = TopLevel.GetTopLevel(this);
+                    var srcLevel = TopLevel.GetTopLevel(sourceVisual);
+                    var tgtLevel = TopLevel.GetTopLevel(targetVisual);
+
+                    // If the popup is drawn as a separate OS window/top-level, ensure we don't close it when clicked
+                    if (srcLevel != null && srcLevel != mainLevel && srcLevel == tgtLevel)
+                    {
+                        isInsideKeyboard = true;
+                    }
+                    else
+                    {
+                        // Fallback: Exhaustive tree traversal (combining Visual and Logical chains)
+                        Avalonia.Visual? current = sourceVisual;
+                        while (current != null)
+                        {
+                            if (current == targetVisual || current == GcodeKeyboardPopup)
+                            {
+                                isInsideKeyboard = true;
+                                break;
+                            }
+                            current = current.GetVisualParent() ?? (current as ILogical)?.LogicalParent as Avalonia.Visual;
+                        }
+                    }
                 }
                 
                 // Check if click is outside keyboard and not on a textbox
