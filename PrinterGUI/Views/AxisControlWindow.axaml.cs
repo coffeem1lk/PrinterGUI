@@ -41,45 +41,12 @@ namespace PrinterGUI.Views
 
         private void Window_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
-            // Close keyboard if click is outside the keyboard and not on the textbox
-            if (GcodeKeyboardPopup != null && GcodeKeyboardPopup.IsOpen)
+            // If the event hasn't been handled by the keyboard, and we didn't just click a TextBox, we must have clicked outside.
+            if (GcodeKeyboardPopup != null && GcodeKeyboardPopup.IsOpen && !e.Handled)
             {
-                bool isInsideKeyboard = false;
-                
-                // Reliably check if the clicked UI element is part of the keyboard layout
-                if (e.Source is Avalonia.Visual sourceVisual && GcodeKeyboardPopup.Child is Avalonia.Visual targetVisual)
-                {
-                    var mainLevel = TopLevel.GetTopLevel(this);
-                    var srcLevel = TopLevel.GetTopLevel(sourceVisual);
-                    var tgtLevel = TopLevel.GetTopLevel(targetVisual);
-
-                    // If the popup is drawn as a separate OS window/top-level, ensure we don't close it when clicked
-                    if (srcLevel != null && srcLevel != mainLevel && srcLevel == tgtLevel)
-                    {
-                        isInsideKeyboard = true;
-                    }
-                    else
-                    {
-                        // Fallback: Exhaustive tree traversal (combining Visual and Logical chains)
-                        Avalonia.Visual? current = sourceVisual;
-                        while (current != null)
-                        {
-                            if (current == targetVisual || current == GcodeKeyboardPopup)
-                            {
-                                isInsideKeyboard = true;
-                                break;
-                            }
-                            current = current.GetVisualParent() ?? (current as ILogical)?.LogicalParent as Avalonia.Visual;
-                        }
-                    }
-                }
-                
-                // Check if click is outside keyboard and not on a textbox
-                if (!isInsideKeyboard && e.Source is not TextBox)
+                if (e.Source is not TextBox)
                 {
                     GcodeKeyboardPopup.IsOpen = false;
-                    
-                    // Explicitly take focus to the Window itself to un-focus the TextBox visually
                     this.Focus();
                     TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
                 }
@@ -112,10 +79,6 @@ namespace PrinterGUI.Views
         private void TextBox_LostFocus(object? sender, RoutedEventArgs e)
         {
             // Intentionally left blank. 
-            // On touch devices (like Linux/Raspberry Pi), Popups are separate windows and 
-            // can temporarily steal focus during a touch gesture, which would cause the keyboard 
-            // to spontaneously disappear if we hid it here.
-            // Hiding the keyboard is fully handled by Window_PointerPressed when clicking off the keyboard.
         }
     }
 }

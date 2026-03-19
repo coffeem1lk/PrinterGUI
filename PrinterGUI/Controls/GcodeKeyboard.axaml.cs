@@ -21,6 +21,12 @@ namespace PrinterGUI.Controls
         public GcodeKeyboard()
         {
             InitializeComponent();
+
+            // Catch all clicks on the keyboard background/elements and stop them from bubbling to the window
+            this.AddHandler(PointerPressedEvent, (s, e) => 
+            {
+                e.Handled = true; 
+            }, RoutingStrategies.Tunnel);
         }
 
         private void Number_Click(object? sender, RoutedEventArgs e)
