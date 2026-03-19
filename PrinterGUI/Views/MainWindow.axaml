@@ -134,8 +134,9 @@
     </Border>
 
     <!-- Floating Numeric Keyboard Popup -->
-    <Popup x:Name="KeyboardPopup" 
-           IsOpen="False" 
+    <Popup x:Name="KeyboardPopup"
+           IsOpen="False"
+           IsLightDismissEnabled="False"
            Placement="Right"
            PlacementTarget="{Binding #LayerHeightTextBox}">
       <controls:NumericKeyboard x:Name="NumericKeyboard"/>

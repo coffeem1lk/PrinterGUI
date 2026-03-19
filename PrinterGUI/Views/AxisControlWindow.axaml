@@ -160,8 +160,9 @@
     </StackPanel>
 
     <!-- Floating G-code Keyboard Popup -->
-    <Popup x:Name="GcodeKeyboardPopup" 
-           IsOpen="False" 
+    <Popup x:Name="GcodeKeyboardPopup"
+           IsOpen="False"
+           IsLightDismissEnabled="False"
            Placement="Bottom"
            PlacementTarget="{Binding #CustomGcodeTextBox}">
       <controls:GcodeKeyboard x:Name="GcodeKeyboard"/>

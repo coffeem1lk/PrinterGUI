@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Controls.Primitives;
-using Avalonia.VisualTree;
 using PrinterGUI.ViewModels;
 
 namespace PrinterGUI.Views
@@ -23,35 +18,23 @@ namespace PrinterGUI.Views
         {
             DataContext = new AxisControlViewModel(serialPort);
 
-            // Listen for the Enter pressed event so we can close the keyboard
             if (GcodeKeyboard != null)
             {
                 GcodeKeyboard.EnterPressed += (s, e) =>
                 {
                     if (GcodeKeyboardPopup != null) GcodeKeyboardPopup.IsOpen = false;
-
-                    // Force the window to take focus so the textbox truly "loses" it visually and logically
                     this.Focus();
                     TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
                 };
             }
 
-            // Re-route normal window clicks to close keyboard
-            this.AddHandler(PointerPressedEvent, Window_PointerPressed, RoutingStrategies.Tunnel);
+            // Use Bubble (not Tunnel) for touch-stable behavior
+            this.AddHandler(PointerPressedEvent, Window_PointerPressed, RoutingStrategies.Bubble);
 
-            // Bind pointer pressed to the textbox to ALWAYS open keyboard even if already focused
             if (CustomGcodeTextBox != null)
             {
-                CustomGcodeTextBox.AddHandler(PointerPressedEvent, TextBox_PointerPressed, RoutingStrategies.Tunnel);
+                CustomGcodeTextBox.AddHandler(PointerPressedEvent, TextBox_PointerPressed, RoutingStrategies.Bubble);
             }
-        }
-
-        private bool IsPointerInsideKeyboard(object? source)
-        {
-            if (GcodeKeyboardPopup?.Child is not Control popupRoot || source is not Control sourceControl)
-                return false;
-
-            return sourceControl == popupRoot || sourceControl.GetVisualAncestors().Contains(popupRoot);
         }
 
         private void Window_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -59,11 +42,6 @@ namespace PrinterGUI.Views
             if (GcodeKeyboardPopup == null || !GcodeKeyboardPopup.IsOpen)
                 return;
 
-            // Ignore clicks/touches inside the popup keyboard itself
-            if (IsPointerInsideKeyboard(e.Source))
-                return;
-
-            // Keep open when interacting with textboxes; they manage popup open/reposition
             if (e.Source is TextBox)
                 return;
 
@@ -76,7 +54,6 @@ namespace PrinterGUI.Views
         {
             if (sender is TextBox textBox && GcodeKeyboardPopup != null && GcodeKeyboard != null)
             {
-                // Force focus programmatically
                 textBox.Focus();
 
                 GcodeKeyboardPopup.PlacementTarget = textBox;
@@ -86,6 +63,9 @@ namespace PrinterGUI.Views
 
                 GcodeKeyboard.OverwriteNextInput = true;
                 GcodeKeyboardPopup.IsOpen = true;
+
+                // Prevent this same press from bubbling to window-close logic
+                e.Handled = true;
             }
         }
 
@@ -96,10 +76,8 @@ namespace PrinterGUI.Views
 
         private void TextBox_GotFocus(object? sender, GotFocusEventArgs e)
         {
-            // Fallback for standard focus (e.g., Tab key traversal)
             if (sender is TextBox textBox && GcodeKeyboardPopup != null && GcodeKeyboard != null)
             {
-                // Only open if not already open to avoid resetting state unexpectedly
                 if (!GcodeKeyboardPopup.IsOpen)
                 {
                     GcodeKeyboardPopup.PlacementTarget = textBox;

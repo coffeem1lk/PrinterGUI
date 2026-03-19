@@ -2,7 +2,6 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
-using Avalonia.VisualTree;
 using PrinterGUI.ViewModels;
 using System.Threading.Tasks;
 using System.Linq;
@@ -15,7 +14,6 @@ namespace PrinterGUI.Views
         {
             InitializeComponent();
 
-            // Listen for the Enter pressed event so we can close the keyboard
             if (NumericKeyboard != null)
             {
                 NumericKeyboard.EnterPressed += (s, e) =>
@@ -26,11 +24,9 @@ namespace PrinterGUI.Views
                 };
             }
 
-            // Catch clicks that hit the window background
-            this.AddHandler(PointerPressedEvent, Window_PointerPressed, RoutingStrategies.Tunnel);
+            // Use Bubble (not Tunnel) to avoid pre-emptive close on touch interactions
+            this.AddHandler(PointerPressedEvent, Window_PointerPressed, RoutingStrategies.Bubble);
 
-            // Manually bind PointerPressed to our known Numeric TextBoxes
-            // so tapping them ALWAYS opens the keyboard, even if they are already focused.
             var textboxesToBind = new[] {
                 this.FindControl<TextBox>("LayerHeightTextBox"),
                 this.FindControl<TextBox>("DryingTempTextBox"),
@@ -42,16 +38,8 @@ namespace PrinterGUI.Views
 
             foreach (var tb in textboxesToBind.Where(t => t != null))
             {
-                tb.AddHandler(PointerPressedEvent, TextBox_PointerPressed, RoutingStrategies.Tunnel);
+                tb.AddHandler(PointerPressedEvent, TextBox_PointerPressed, RoutingStrategies.Bubble);
             }
-        }
-
-        private bool IsPointerInsideKeyboard(object? source)
-        {
-            if (KeyboardPopup?.Child is not Control popupRoot || source is not Control sourceControl)
-                return false;
-
-            return sourceControl == popupRoot || sourceControl.GetVisualAncestors().Contains(popupRoot);
         }
 
         private void Window_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -59,11 +47,6 @@ namespace PrinterGUI.Views
             if (KeyboardPopup == null || !KeyboardPopup.IsOpen)
                 return;
 
-            // Ignore clicks/touches inside the popup keyboard itself
-            if (IsPointerInsideKeyboard(e.Source))
-                return;
-
-            // Keep open when interacting with textboxes; they manage popup open/reposition
             if (e.Source is TextBox)
                 return;
 
@@ -76,7 +59,6 @@ namespace PrinterGUI.Views
         {
             if (sender is TextBox textBox && KeyboardPopup != null && NumericKeyboard != null)
             {
-                // Force focus explicitly
                 textBox.Focus();
 
                 KeyboardPopup.PlacementTarget = textBox;
@@ -89,8 +71,10 @@ namespace PrinterGUI.Views
 
                 KeyboardPopup.VerticalOffset = (keyboardHeight - textBoxHeight) / 2;
                 NumericKeyboard.OverwriteNextInput = true;
-
                 KeyboardPopup.IsOpen = true;
+
+                // Prevent this same press from bubbling to window-close logic
+                e.Handled = true;
             }
         }
 
@@ -99,16 +83,13 @@ namespace PrinterGUI.Views
             if (DataContext is not MainWindowViewModel vm) return;
 
             var dlg = new ConfirmationDialog("ARE YOU SURE??");
-
             var result = await dlg.ShowDialog<bool>(this);
-            if (result)
-            {
-                if (vm.SendToPrinterCommand.CanExecute(null))
-                    vm.SendToPrinterCommand.Execute(null);
-            }
+
+            if (result && vm.SendToPrinterCommand.CanExecute(null))
+                vm.SendToPrinterCommand.Execute(null);
         }
 
-        private void AxisControl_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        private void AxisControl_Click(object? sender, RoutedEventArgs e)
         {
             if (DataContext is MainWindowViewModel vm)
             {
@@ -117,7 +98,7 @@ namespace PrinterGUI.Views
             }
         }
 
-        private void SetProbeOffset_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        private void SetProbeOffset_Click(object? sender, RoutedEventArgs e)
         {
             if (DataContext is MainWindowViewModel vm)
             {
@@ -126,9 +107,8 @@ namespace PrinterGUI.Views
             }
         }
 
-        private void TextBox_GotFocus(object? sender, Avalonia.Input.GotFocusEventArgs e)
+        private void TextBox_GotFocus(object? sender, GotFocusEventArgs e)
         {
-            // Fallback for non-pointer focus traversal
             if (sender is TextBox textBox && KeyboardPopup != null && NumericKeyboard != null)
             {
                 if (!KeyboardPopup.IsOpen)
@@ -143,13 +123,12 @@ namespace PrinterGUI.Views
 
                     KeyboardPopup.VerticalOffset = (keyboardHeight - textBoxHeight) / 2;
                     NumericKeyboard.OverwriteNextInput = true;
-
                     KeyboardPopup.IsOpen = true;
                 }
             }
         }
 
-        private void TextBox_LostFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        private void TextBox_LostFocus(object? sender, RoutedEventArgs e)
         {
         }
     }
