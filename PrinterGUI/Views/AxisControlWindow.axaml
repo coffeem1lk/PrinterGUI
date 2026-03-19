@@ -160,10 +160,8 @@
     </StackPanel>
 
     <!-- Floating G-code Keyboard Popup -->
-    <!-- Added IsLightDismissEnabled to natively allow clicking away -->
     <Popup x:Name="GcodeKeyboardPopup" 
            IsOpen="False" 
-           IsLightDismissEnabled="True"
            Placement="Bottom"
            PlacementTarget="{Binding #CustomGcodeTextBox}">
       <controls:GcodeKeyboard x:Name="GcodeKeyboard"/>
