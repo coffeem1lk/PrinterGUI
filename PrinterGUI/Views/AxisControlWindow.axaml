@@ -23,107 +23,38 @@
         <Grid ColumnDefinitions="Auto,8,Auto" HorizontalAlignment="Center">
           <!-- XY Cross Control (Left) -->
           <Grid Grid.Column="0" ColumnDefinitions="60,60,60,60,60" RowDefinitions="45,45,45,45,45">
-            <!-- Y +10 (top) -->
-            <Button Grid.Row="0" Grid.Column="2" 
-                    Content="Y +10" 
-                    Command="{Binding MoveYCommand}" 
-                    CommandParameter="10"
-                    Margin="1"
-                    Width="58"
-                    Height="43"/>
-            
-            <!-- Y +1 -->
-            <Button Grid.Row="1" Grid.Column="2" 
-                    Content="Y +1" 
-                    Command="{Binding MoveYCommand}" 
-                    CommandParameter="1"
-                    Margin="1"
-                    Width="58"
-                    Height="43"/>
-            
-            <!-- X row (middle) -->
-            <Button Grid.Row="2" Grid.Column="0" 
-                    Content="X +10" 
-                    Command="{Binding MoveXCommand}" 
-                    CommandParameter="10"
-                    Margin="1"
-                    Width="58"
-                    Height="43"/>
-            <Button Grid.Row="2" Grid.Column="1" 
-                    Content="X +1" 
-                    Command="{Binding MoveXCommand}" 
-                    CommandParameter="1"
-                    Margin="1"
-                    Width="58"
-                    Height="43"/>
-            <!-- Center space (column 2) -->
-            <Button Grid.Row="2" Grid.Column="3" 
-                    Content="X -1" 
-                    Command="{Binding MoveXCommand}" 
-                    CommandParameter="-1"
-                    Margin="1"
-                    Width="58"
-                    Height="43"/>
-            <Button Grid.Row="2" Grid.Column="4" 
-                    Content="X -10" 
-                    Command="{Binding MoveXCommand}" 
-                    CommandParameter="-10"
-                    Margin="1"
-                    Width="58"
-                    Height="43"/>
-            
-            <!-- Y -1 -->
-            <Button Grid.Row="3" Grid.Column="2" 
-                    Content="Y -1" 
-                    Command="{Binding MoveYCommand}" 
-                    CommandParameter="-1"
-                    Margin="1"
-                    Width="58"
-                    Height="43"/>
-            
-            <!-- Y -10 (bottom) -->
-            <Button Grid.Row="4" Grid.Column="2" 
-                    Content="Y -10" 
-                    Command="{Binding MoveYCommand}" 
-                    CommandParameter="-10"
-                    Margin="1"
-                    Width="58"
-                    Height="43"/>
+            <Button Grid.Row="0" Grid.Column="2" Content="Y +10" Command="{Binding MoveYCommand}" CommandParameter="10" Margin="1" Width="58" Height="43"/>
+            <Button Grid.Row="1" Grid.Column="2" Content="Y +1" Command="{Binding MoveYCommand}" CommandParameter="1" Margin="1" Width="58" Height="43"/>
+            <Button Grid.Row="2" Grid.Column="0" Content="X +10" Command="{Binding MoveXCommand}" CommandParameter="10" Margin="1" Width="58" Height="43"/>
+            <Button Grid.Row="2" Grid.Column="1" Content="X +1" Command="{Binding MoveXCommand}" CommandParameter="1" Margin="1" Width="58" Height="43"/>
+            <Button Grid.Row="2" Grid.Column="3" Content="X -1" Command="{Binding MoveXCommand}" CommandParameter="-1" Margin="1" Width="58" Height="43"/>
+            <Button Grid.Row="2" Grid.Column="4" Content="X -10" Command="{Binding MoveXCommand}" CommandParameter="-10" Margin="1" Width="58" Height="43"/>
+            <Button Grid.Row="3" Grid.Column="2" Content="Y -1" Command="{Binding MoveYCommand}" CommandParameter="-1" Margin="1" Width="58" Height="43"/>
+            <Button Grid.Row="4" Grid.Column="2" Content="Y -10" Command="{Binding MoveYCommand}" CommandParameter="-10" Margin="1" Width="58" Height="43"/>
           </Grid>
 
-          <!-- Z/E0/E1 Columns (Right) - E0/E1 order reversed -->
+          <!-- Z/E0/E1 Columns -->
           <Grid Grid.Column="2" ColumnDefinitions="65,8,65,8,65" RowDefinitions="45,45,45,45,45">
-            <!-- Row 0: Z +10, E0 -10, E1 -10 -->
             <Button Grid.Row="0" Grid.Column="0" Content="Z +10" Command="{Binding MoveZCommand}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
             <Button Grid.Row="0" Grid.Column="2" Content="E0 -10" Command="{Binding MoveE0Command}" CommandParameter="-10" Margin="1" Width="63" Height="43"/>
             <Button Grid.Row="0" Grid.Column="4" Content="E1 -10" Command="{Binding MoveE1Command}" CommandParameter="-10" Margin="1" Width="63" Height="43"/>
-            
-            <!-- Row 1: Z +1, E0 -1, E1 -1 (aligned with Y +1) -->
             <Button Grid.Row="1" Grid.Column="0" Content="Z +1" Command="{Binding MoveZCommand}" CommandParameter="1" Margin="1" Width="63" Height="43"/>
             <Button Grid.Row="1" Grid.Column="2" Content="E0 -1" Command="{Binding MoveE0Command}" CommandParameter="-1" Margin="1" Width="63" Height="43"/>
             <Button Grid.Row="1" Grid.Column="4" Content="E1 -1" Command="{Binding MoveE1Command}" CommandParameter="-1" Margin="1" Width="63" Height="43"/>
-            
-            <!-- Row 2: Empty (aligns with X row) -->
-            
-            <!-- Row 3: Z -1, E0 +1, E1 +1 (aligned with Y -1) -->
             <Button Grid.Row="3" Grid.Column="0" Content="Z -1" Command="{Binding MoveZCommand}" CommandParameter="-1" Margin="1" Width="63" Height="43"/>
             <Button Grid.Row="3" Grid.Column="2" Content="E0 +1" Command="{Binding MoveE0Command}" CommandParameter="1" Margin="1" Width="63" Height="43"/>
             <Button Grid.Row="3" Grid.Column="4" Content="E1 +1" Command="{Binding MoveE1Command}" CommandParameter="1" Margin="1" Width="63" Height="43"/>
-            
-            <!-- Row 4: Z -10, E0 +10, E1 +10 -->
             <Button Grid.Row="4" Grid.Column="0" Content="Z -10" Command="{Binding MoveZCommand}" CommandParameter="-10" Margin="1" Width="63" Height="43"/>
             <Button Grid.Row="4" Grid.Column="2" Content="E0 +10" Command="{Binding MoveE0Command}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
             <Button Grid.Row="4" Grid.Column="4" Content="E1 +10" Command="{Binding MoveE1Command}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
           </Grid>
         </Grid>
 
-        <!-- Home All / Disable Motors -->
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" HorizontalAlignment="Center">
           <Button Content="Home All" Command="{Binding HomeAllCommand}" Width="150" Height="40"/>
           <Button Content="Disable Motors" Command="{Binding DisableMotorsCommand}" Width="150" Height="40"/>
         </StackPanel>
 
-        <!-- Custom G-code Command -->
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,16,0,0" HorizontalAlignment="Center">
           <TextBlock Text="G-code" FontWeight="SemiBold" VerticalAlignment="Center"/>
           <TextBox x:Name="CustomGcodeTextBox"
@@ -131,41 +62,31 @@
                    Width="400"
                    Height="40"
                    VerticalContentAlignment="Center"
-                   GotFocus="TextBox_GotFocus" 
+                   GotFocus="TextBox_GotFocus"
                    LostFocus="TextBox_LostFocus"/>
-          <Button Content="Send" 
-                  Command="{Binding SendCustomGcodeCommand}" 
-                  Width="100"
-                  Height="40"/>
+          <Button Content="Send" Command="{Binding SendCustomGcodeCommand}" Width="100" Height="40"/>
         </StackPanel>
 
-        <!-- Response Display -->
         <StackPanel Margin="0,8,0,0">
           <TextBlock Text="Printer Response:" FontWeight="SemiBold" Margin="0,0,0,4" HorizontalAlignment="Center"/>
           <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="8" Background="#F5F5F5" HorizontalAlignment="Center" Width="500">
-            <TextBlock Text="{Binding Response}" 
-                       TextWrapping="Wrap" 
-                       FontFamily="Consolas,Courier New"
-                       FontSize="11"
-                       MinHeight="40"/>
+            <TextBlock Text="{Binding Response}" TextWrapping="Wrap" FontFamily="Consolas,Courier New" FontSize="11" MinHeight="40"/>
           </Border>
         </StackPanel>
       </StackPanel>
     </ScrollViewer>
 
-    <!-- Status -->
     <StackPanel Grid.Row="1" Margin="0,12,0,0">
       <TextBlock Text="{Binding Status}" Foreground="Gray" TextWrapping="Wrap" Height="40"/>
       <Button Content="Close" Click="Close_Click" HorizontalAlignment="Right" Margin="0,8,0,0" Width="80"/>
     </StackPanel>
 
-    <!-- Floating G-code Keyboard Popup -->
-    <Popup x:Name="GcodeKeyboardPopup"
-           IsOpen="False"
-           IsLightDismissEnabled="False"
-           Placement="Bottom"
-           PlacementTarget="{Binding #CustomGcodeTextBox}">
-      <controls:GcodeKeyboard x:Name="GcodeKeyboard"/>
-    </Popup>
+    <!-- Overlay keyboard (Microfluidics-style) -->
+    <controls:GcodeKeyboard x:Name="GcodeKeyboard"
+                            IsVisible="False"
+                            Grid.RowSpan="2"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Bottom"
+                            Margin="0,0,0,8"/>
   </Grid>
 </Window>

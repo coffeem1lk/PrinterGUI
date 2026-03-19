@@ -23,7 +23,7 @@
       <TextBlock Text="3D Printer" Foreground="White" FontSize="20" VerticalAlignment="Center"/>
     </Border>
 
-    <!-- Main content wrapped in a Border to provide padding (Grid doesn't have Padding) -->
+    <!-- Main content -->
     <Border Grid.Row="1" Padding="8">
       <Grid>
         <Grid.ColumnDefinitions>
@@ -31,10 +31,8 @@
           <ColumnDefinition Width="1.5*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Object list -->
         <StackPanel Grid.Column="0" Margin="0,0,8,0">
           <TextBlock Text="Models" FontWeight="Bold" Margin="4"/>
-          <!-- Simple list without thumbnails -->
           <ListBox ItemsSource="{Binding Objects}" SelectedItem="{Binding SelectedObject}" Height="360">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:PrintObject">
@@ -47,11 +45,9 @@
           </ListBox>
         </StackPanel>
 
-        <!-- Parameters and actions -->
         <StackPanel Grid.Column="1">
           <TextBlock Text="Print Parameters" FontWeight="Bold" Margin="4"/>
 
-          <!-- Two-column grid for parameters: left column general, right column drying parameters -->
           <Grid Margin="0,6,0,0">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="1*"/>
@@ -59,68 +55,59 @@
             </Grid.ColumnDefinitions>
 
             <Grid.RowDefinitions>
-              <RowDefinition Height="Auto"/> <!-- Layer / Drying Temp -->
-              <RowDefinition Height="Auto"/> <!-- Infill / Drying Time -->
-              <RowDefinition Height="Auto"/> <!-- Speed / Drying Time RT -->
-              <RowDefinition Height="Auto"/> <!-- Serial port (span) -->
-              <RowDefinition Height="Auto"/> <!-- Set Probe Offset button -->
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Layer height -->
             <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
               <TextBlock Text="Layer Height (mm)" Width="132" VerticalAlignment="Center"/>
-              <TextBox x:Name="LayerHeightTextBox" Text="{Binding LayerHeight}" Width="60" 
+              <TextBox x:Name="LayerHeightTextBox" Text="{Binding LayerHeight}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
-            <!-- Drying Temp -->
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
               <TextBlock Text="Drying Temp (&#176;C)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="DryingTempTextBox" Text="{Binding DryingTemp}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
-            <!-- Infill -->
             <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
               <TextBlock Text="Infill Density (%)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="InfillTextBox" Text="{Binding Infill}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
-            <!-- Drying time -->
             <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
               <TextBlock Text="Drying Time (min)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="DryingTimeTextBox" Text="{Binding DryingTime}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
-            <!-- Print speed -->
             <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
               <TextBlock Text="Print Speed (mm/s)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="PrintSpeedTextBox" Text="{Binding PrintSpeed}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
-            <!-- Drying time RT -->
             <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
               <TextBlock Text="Drying Time RT (min)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="DryingTimeRTTextBox" Text="{Binding DryingTimeRT}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
-            <!-- Serial Port spans both columns and keeps original wider textbox -->
             <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,6,0,0">
               <TextBlock Text="Serial Port" Width="132" VerticalAlignment="Center"/>
               <TextBox Text="{Binding SerialPortPath}" Width="160" Watermark="/dev/ttyUSB0 or /dev/ttyACM0"/>
             </StackPanel>
 
-            <!-- Set Probe Offset button -->
             <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0">
               <Button Content="Set Probe Offset" Click="SetProbeOffset_Click" Width="160"/>
             </StackPanel>
           </Grid>
 
-          <!-- Generate and Send buttons -->
           <StackPanel Orientation="Horizontal" Margin="0,12,0,0" HorizontalAlignment="Left" Spacing="8">
             <Button Content="Generate G-code" Command="{Binding GenerateGcodeCommand}" Width="140" IsEnabled="{Binding CanSend}"/>
             <Button Content="Print" Click="SendToPrinter_Click" Width="140" IsEnabled="{Binding CanSend}"/>
@@ -133,16 +120,14 @@
       </Grid>
     </Border>
 
-    <!-- Floating Numeric Keyboard Popup -->
-    <Popup x:Name="KeyboardPopup"
-           IsOpen="False"
-           IsLightDismissEnabled="False"
-           Placement="Right"
-           PlacementTarget="{Binding #LayerHeightTextBox}">
-      <controls:NumericKeyboard x:Name="NumericKeyboard"/>
-    </Popup>
+    <!-- Overlay numeric keyboard (Microfluidics-style) -->
+    <controls:NumericKeyboard x:Name="NumericKeyboard"
+                          IsVisible="False"
+                          Grid.RowSpan="3"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center"
+                          Margin="0,0,12,0"/>
 
-    <!-- Footer / credits -->
     <Border Grid.Row="2" Background="#111" Padding="8">
       <TextBlock Text="Ready" Foreground="White" HorizontalAlignment="Left" />
     </Border>

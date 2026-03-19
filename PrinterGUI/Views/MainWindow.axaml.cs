@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 using PrinterGUI.ViewModels;
 using System.Threading.Tasks;
 using System.Linq;
@@ -10,21 +10,17 @@ namespace PrinterGUI.Views
 {
     public partial class MainWindow : Window
     {
+        private TextBox? _activeTextBox;
+
         public MainWindow()
         {
             InitializeComponent();
 
             if (NumericKeyboard != null)
             {
-                NumericKeyboard.EnterPressed += (s, e) =>
-                {
-                    if (KeyboardPopup != null) KeyboardPopup.IsOpen = false;
-                    this.Focus();
-                    TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
-                };
+                NumericKeyboard.EnterPressed += (s, e) => HideKeyboard();
             }
 
-            // Use Bubble (not Tunnel) to avoid pre-emptive close on touch interactions
             this.AddHandler(PointerPressedEvent, Window_PointerPressed, RoutingStrategies.Bubble);
 
             var textboxesToBind = new[] {
@@ -42,40 +38,71 @@ namespace PrinterGUI.Views
             }
         }
 
+        private bool IsPointerInsideNumericKeyboard(object? source)
+        {
+            if (NumericKeyboard == null || source is not Control sourceControl)
+                return false;
+
+            return sourceControl == NumericKeyboard || sourceControl.GetVisualAncestors().Contains(NumericKeyboard);
+        }
+
         private void Window_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
-            if (KeyboardPopup == null || !KeyboardPopup.IsOpen)
+            if (NumericKeyboard == null || !NumericKeyboard.IsVisible)
+                return;
+
+            if (IsPointerInsideNumericKeyboard(e.Source))
                 return;
 
             if (e.Source is TextBox)
                 return;
 
-            KeyboardPopup.IsOpen = false;
+            HideKeyboard();
+        }
+
+        private void ShowKeyboard(TextBox textBox)
+        {
+            _activeTextBox = textBox;
+            textBox.Focus();
+
+            if (NumericKeyboard != null)
+            {
+                NumericKeyboard.OverwriteNextInput = true;
+                NumericKeyboard.IsVisible = true;
+            }
+        }
+
+        private void HideKeyboard()
+        {
+            if (NumericKeyboard != null)
+            {
+                NumericKeyboard.IsVisible = false;
+            }
+
+            _activeTextBox = null;
             this.Focus();
             TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
         }
 
         private void TextBox_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
-            if (sender is TextBox textBox && KeyboardPopup != null && NumericKeyboard != null)
+            if (sender is TextBox textBox)
             {
-                textBox.Focus();
-
-                KeyboardPopup.PlacementTarget = textBox;
-                KeyboardPopup.Placement = PlacementMode.Right;
-                KeyboardPopup.HorizontalOffset = 10;
-
-                double textBoxHeight = textBox.Bounds.Height;
-                double keyboardHeight = NumericKeyboard.Bounds.Height;
-                if (keyboardHeight == 0) keyboardHeight = 232;
-
-                KeyboardPopup.VerticalOffset = (keyboardHeight - textBoxHeight) / 2;
-                NumericKeyboard.OverwriteNextInput = true;
-                KeyboardPopup.IsOpen = true;
-
-                // Prevent this same press from bubbling to window-close logic
+                ShowKeyboard(textBox);
                 e.Handled = true;
             }
+        }
+
+        private void TextBox_GotFocus(object? sender, GotFocusEventArgs e)
+        {
+            if (sender is TextBox textBox)
+            {
+                ShowKeyboard(textBox);
+            }
+        }
+
+        private void TextBox_LostFocus(object? sender, RoutedEventArgs e)
+        {
         }
 
         private async void SendToPrinter_Click(object? sender, RoutedEventArgs e)
@@ -105,31 +132,6 @@ namespace PrinterGUI.Views
                 var probeWindow = new ProbeOffsetWindow(vm.SerialPortPath);
                 probeWindow.Show();
             }
-        }
-
-        private void TextBox_GotFocus(object? sender, GotFocusEventArgs e)
-        {
-            if (sender is TextBox textBox && KeyboardPopup != null && NumericKeyboard != null)
-            {
-                if (!KeyboardPopup.IsOpen)
-                {
-                    KeyboardPopup.PlacementTarget = textBox;
-                    KeyboardPopup.Placement = PlacementMode.Right;
-                    KeyboardPopup.HorizontalOffset = 10;
-
-                    double textBoxHeight = textBox.Bounds.Height;
-                    double keyboardHeight = NumericKeyboard.Bounds.Height;
-                    if (keyboardHeight == 0) keyboardHeight = 232;
-
-                    KeyboardPopup.VerticalOffset = (keyboardHeight - textBoxHeight) / 2;
-                    NumericKeyboard.OverwriteNextInput = true;
-                    KeyboardPopup.IsOpen = true;
-                }
-            }
-        }
-
-        private void TextBox_LostFocus(object? sender, RoutedEventArgs e)
-        {
         }
     }
 }
