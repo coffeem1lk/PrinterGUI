@@ -4,11 +4,11 @@
         xmlns:controls="using:PrinterGUI.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="650"
         x:Class="PrinterGUI.Views.AxisControlWindow"
         x:DataType="vm:AxisControlViewModel"
         Title="Axis Control"
-        Width="600" Height="600"
+        Width="900" Height="650"
         CanResize="False">
 
   <Design.DataContext>
@@ -16,7 +16,6 @@
   </Design.DataContext>
 
   <Grid RowDefinitions="*,Auto" Margin="12">
-
     <ScrollViewer Grid.Row="0">
       <StackPanel Spacing="16">
         <!-- Main Control Grid: XY Cross + Z/E0/E1 Columns -->
@@ -81,12 +80,12 @@
       <Button Content="Close" Click="Close_Click" HorizontalAlignment="Right" Margin="0,8,0,0" Width="80"/>
     </StackPanel>
 
-    <!-- Floating overlay keyboard (does NOT affect layout size) -->
+    <!-- Floating overlay keyboard (fixed position) -->
     <controls:GcodeKeyboard x:Name="GcodeKeyboard"
                             IsVisible="False"
                             Grid.RowSpan="2"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Bottom"
-                            Margin="0,0,0,260"/>
+                            Margin="0,0,0,300"/>
   </Grid>
 </Window>

@@ -39,7 +39,7 @@ namespace PrinterGUI.Views
             if (GcodeKeyboard == null || source is not Control sourceControl)
                 return false;
 
-            return sourceControl == GcodeKeyboard || sourceControl.GetVisualAncestors().Contains(GcodeKeyboard);
+            return sourceControl == GcodeKeyboard || sourceControl.GetVisualAncestors().Any(v => ReferenceEquals(v, GcodeKeyboard));
         }
 
         private void Window_PointerPressed(object? sender, PointerPressedEventArgs e)
