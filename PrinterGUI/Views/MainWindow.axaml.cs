@@ -4,9 +4,6 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using PrinterGUI.ViewModels;
 using System.Threading.Tasks;
-using System.Linq;
-using Avalonia.VisualTree; 
-using Avalonia.LogicalTree; // Required for logical hierarchy checks
 
 namespace PrinterGUI.Views
 {
@@ -15,9 +12,6 @@ namespace PrinterGUI.Views
         public MainWindow()
         {
             InitializeComponent();
-            
-            // Close keyboard when clicking outside (handled = true inside keyboard will prevent this from triggering)
-            this.AddHandler(PointerPressedEvent, Window_PointerPressed, RoutingStrategies.Tunnel);
 
             // Listen for the Enter pressed event so we can close the keyboard
             if (NumericKeyboard != null)
@@ -28,20 +22,6 @@ namespace PrinterGUI.Views
                     this.Focus();
                     TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
                 };
-            }
-        }
-
-        private void Window_PointerPressed(object? sender, PointerPressedEventArgs e)
-        {
-            // If the event hasn't been handled by the keyboard, and we didn't just click a TextBox, we must have clicked outside.
-            if (KeyboardPopup != null && KeyboardPopup.IsOpen && !e.Handled)
-            {
-                if (e.Source is not TextBox)
-                {
-                    KeyboardPopup.IsOpen = false;
-                    this.Focus();
-                    TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
-                }
             }
         }
 
@@ -94,7 +74,6 @@ namespace PrinterGUI.Views
                 // If keyboard hasn't been measured yet, use estimated height
                 if (keyboardHeight == 0)
                 {
-                    // 4 rows of 48px buttons + 3 gaps of 8px + 16px padding = 232px
                     keyboardHeight = 232;
                 }
                 

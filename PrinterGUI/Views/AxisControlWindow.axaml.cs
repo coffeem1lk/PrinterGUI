@@ -8,8 +8,6 @@ using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Controls.Primitives;
 using PrinterGUI.ViewModels;
-using Avalonia.VisualTree; 
-using Avalonia.LogicalTree; // Required for logical hierarchy checks
 
 namespace PrinterGUI.Views
 {
@@ -23,9 +21,6 @@ namespace PrinterGUI.Views
         public AxisControlWindow(string serialPort) : this()
         {
             DataContext = new AxisControlViewModel(serialPort);
-            
-            // Close keyboard when clicking outside
-            this.AddHandler(PointerPressedEvent, Window_PointerPressed, RoutingStrategies.Tunnel);
 
             // Listen for the Enter pressed event so we can close the keyboard
             if (GcodeKeyboard != null)
@@ -36,20 +31,6 @@ namespace PrinterGUI.Views
                     this.Focus();
                     TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
                 };
-            }
-        }
-
-        private void Window_PointerPressed(object? sender, PointerPressedEventArgs e)
-        {
-            // If the event hasn't been handled by the keyboard, and we didn't just click a TextBox, we must have clicked outside.
-            if (GcodeKeyboardPopup != null && GcodeKeyboardPopup.IsOpen && !e.Handled)
-            {
-                if (e.Source is not TextBox)
-                {
-                    GcodeKeyboardPopup.IsOpen = false;
-                    this.Focus();
-                    TopLevel.GetTopLevel(this)?.FocusManager?.ClearFocus();
-                }
             }
         }
 
