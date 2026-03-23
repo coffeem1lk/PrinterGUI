@@ -1,8 +1,11 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Input;
+using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using PrinterGUI.ViewModels;
+using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using System.Linq;
 
@@ -132,6 +135,37 @@ namespace PrinterGUI.Views
                 var probeWindow = new ProbeOffsetWindow(vm.SerialPortPath);
                 probeWindow.Show();
             }
+        }
+
+        private async void PrintCustomGcode_Click(object? sender, RoutedEventArgs e)
+        {
+            if (DataContext is not MainWindowViewModel vm) return;
+
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Select a G-code file",
+                AllowMultiple = false,
+                FileTypeFilter = new List<FilePickerFileType>
+                {
+                    new FilePickerFileType("G-code")
+                    {
+                        Patterns = new[] { "*.gcode", "*.gc", "*.gco" }
+                    }
+                }
+            });
+
+            if (files == null || files.Count == 0)
+                return;
+
+            var selectedPath = files[0].Path.LocalPath;
+            if (string.IsNullOrWhiteSpace(selectedPath))
+                return;
+
+            var dlg = new ConfirmationDialog($"PRINT THIS FILE?\n{Path.GetFileName(selectedPath)}");
+            var result = await dlg.ShowDialog<bool>(this);
+            if (!result) return;
+
+            await vm.SendCustomGcodeFileAsync(selectedPath);
         }
     }
 }

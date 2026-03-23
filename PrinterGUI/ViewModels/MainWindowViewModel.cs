@@ -55,7 +55,7 @@ namespace PrinterGUI.ViewModels
 
         void UpdateCanSend() { Notify(nameof(CanSend)); }
 
-        public ICommand GenerateGcodeCommand { get; }
+        // public ICommand GenerateGcodeCommand { get; }
         public ICommand SendToPrinterCommand { get; }
 
         readonly SerialPrinterService _serial = new SerialPrinterService();
@@ -78,7 +78,7 @@ namespace PrinterGUI.ViewModels
             // Start watching the models folder to update the list live
             StartWatchingModelsFolder();
 
-            GenerateGcodeCommand = new RelayCommand(async _ => await GenerateGcodeAsync());
+            // GenerateGcodeCommand = new RelayCommand(async _ => await GenerateGcodeAsync());
             SendToPrinterCommand = new RelayCommand(async _ => await SendToPrinterAsync(), _ => CanSend);
         }
 
@@ -163,80 +163,79 @@ namespace PrinterGUI.ViewModels
             }
         }
 
-        // Generate G-code file next to the STL (same folder) and leave it there
-        async Task GenerateGcodeAsync()
-        {
-            if (SelectedObject == null) { Status = "Select an object first"; return; }
-
-            if (!TryParseInputs(out int extruderTemp, out int dryingTemp, out double layerHeight, out int infill, out double printSpeed))
-                return;
-
-            Status = "Slicing (PrusaSlicer)...";
-            Progress = 0;
-
-            using var cts = new CancellationTokenSource();
-            var progressText = new Progress<string>(s => 
-            {
-                // Only show important messages, not every G-code line or comments
-                if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
-                    Status = s;
-            });
-
-            try
-            {
-                string stlPath = SelectedObject.FileName;
-                if (!Path.IsPathRooted(stlPath))
-                    stlPath = Path.Combine(_modelsFolder, stlPath);
-
-                string outPath = Path.Combine(Path.GetDirectoryName(stlPath) ?? _modelsFolder,
-                    $"{Path.GetFileNameWithoutExtension(stlPath)}_{DateTime.Now:yyyyMMdd_HHmmss}.gcode");
-
-                // ensure dryingTime is passed in the correct position (7th parameter) and printSpeed stays double
-                int dryingTime = 0;
-                if (!int.TryParse(DryingTime, out dryingTime))
-                {
-                    Status = "Invalid drying time";
-                    return;
-                }
-
-                int dryingTimeRT = 0;
-                if (!int.TryParse(DryingTimeRT, out dryingTimeRT))
-                {
-                    Status = "Invalid drying time RT";
-                    return;
-                }
-
-                var result = await GcodeGenerator.SliceWithPrusaAsync(
-                    stlPath,
-                    outPath,
-                    layerHeight,
-                    infill,
-                    extruderTemp,
-                    dryingTemp,
-                    dryingTime,
-                    dryingTimeRT,
-                    printSpeed,
-                    prusaSlicerPath: PrusaSlicerPath,
-                    profilePath: "/home/raspberrypie/config.ini",
-                    extraArgs: null,
-                    timeout: TimeSpan.FromMinutes(12),
-                    outputProgress: progressText,
-                    cancellationToken: cts.Token);
-
-                if (!result.Success)
-                {
-                    Status = $"Slicing failed: {result.Error}";
-                    return;
-                }
-
-                Status = $"G-code saved: {outPath}";
-                Progress = 100;
-            }
-            catch (Exception ex)
-            {
-                Status = $"Slicing failed: {ex.Message}";
-            }
-        }
+        // // Generate G-code file next to the STL (same folder) and leave it there
+        // async Task GenerateGcodeAsync()
+        // {
+        //     if (SelectedObject == null) { Status = "Select an object first"; return; }
+        //
+        //     if (!TryParseInputs(out int extruderTemp, out int dryingTemp, out double layerHeight, out int infill, out double printSpeed))
+        //         return;
+        //
+        //     Status = "Slicing (PrusaSlicer)...";
+        //     Progress = 0;
+        //
+        //     using var cts = new CancellationTokenSource();
+        //     var progressText = new Progress<string>(s => 
+        //     {
+        //         // Only show important messages, not every G-code line or comments
+        //         if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
+        //             Status = s;
+        //     });
+        //
+        //     try
+        //     {
+        //         string stlPath = SelectedObject.FileName;
+        //         if (!Path.IsPathRooted(stlPath))
+        //             stlPath = Path.Combine(_modelsFolder, stlPath);
+        //
+        //         string outPath = Path.Combine(Path.GetDirectoryName(stlPath) ?? _modelsFolder,
+        //             $"{Path.GetFileNameWithoutExtension(stlPath)}_{DateTime.Now:yyyyMMdd_HHmmss}.gcode");
+        //
+        //         int dryingTime = 0;
+        //         if (!int.TryParse(DryingTime, out dryingTime))
+        //         {
+        //             Status = "Invalid drying time";
+        //             return;
+        //         }
+        //
+        //         int dryingTimeRT = 0;
+        //         if (!int.TryParse(DryingTimeRT, out dryingTimeRT))
+        //         {
+        //             Status = "Invalid drying time RT";
+        //             return;
+        //         }
+        //
+        //         var result = await GcodeGenerator.SliceWithPrusaAsync(
+        //             stlPath,
+        //             outPath,
+        //             layerHeight,
+        //             infill,
+        //             extruderTemp,
+        //             dryingTemp,
+        //             dryingTime,
+        //             dryingTimeRT,
+        //             printSpeed,
+        //             prusaSlicerPath: PrusaSlicerPath,
+        //             profilePath: "/home/raspberrypie/config.ini",
+        //             extraArgs: null,
+        //             timeout: TimeSpan.FromMinutes(12),
+        //             outputProgress: progressText,
+        //             cancellationToken: cts.Token);
+        //
+        //         if (!result.Success)
+        //         {
+        //             Status = $"Slicing failed: {result.Error}";
+        //             return;
+        //         }
+        //
+        //         Status = $"G-code saved: {outPath}";
+        //         Progress = 100;
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         Status = $"Slicing failed: {ex.Message}";
+        //     }
+        // }
 
         // Generate temp gcode, send to printer, then delete the temp file and any older generated files for the selected model
         async Task SendToPrinterAsync()
@@ -398,7 +397,7 @@ namespace PrinterGUI.ViewModels
                 if (!Directory.Exists(dir))
                     return;
 
-                // Pattern used by GenerateGcodeAsync: BaseName_yyyyMMdd_HHmmss.gcode
+                // Generated-file pattern: BaseName_yyyyMMdd_HHmmss.gcode
                 var pattern = new Regex("^" + Regex.Escape(baseName) + @"_(\d{8}_\d{6})\.gcode$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
                 var candidates = Directory.GetFiles(dir, baseName + "_*.gcode", SearchOption.TopDirectoryOnly);
@@ -593,6 +592,49 @@ namespace PrinterGUI.ViewModels
                 _debounceTimer?.Dispose();
             }
             catch { }
+        }
+
+        public async Task SendCustomGcodeFileAsync(string gcodePath)
+        {
+            if (string.IsNullOrWhiteSpace(gcodePath) || !File.Exists(gcodePath))
+            {
+                Status = "Selected G-code file not found";
+                return;
+            }
+
+            if (IsSending)
+            {
+                Status = "Already sending a file";
+                return;
+            }
+
+            IsSending = true;
+            _cts = new CancellationTokenSource();
+            Progress = 0;
+            Status = $"Sending custom G-code: {Path.GetFileName(gcodePath)}";
+
+            var progText = new Progress<string>(s =>
+            {
+                if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
+                    Status = s;
+            });
+            var progPercent = new Progress<int>(p => Progress = p);
+
+            try
+            {
+                await _serial.SendFileAsync(gcodePath, SerialPortPath, 115200, progText, progPercent, _cts.Token);
+                Status = "Custom G-code send complete";
+            }
+            catch (Exception ex)
+            {
+                Status = "Custom G-code send failed: " + ex.Message;
+            }
+            finally
+            {
+                IsSending = false;
+                _cts?.Dispose();
+                _cts = null;
+            }
         }
     }
 }
