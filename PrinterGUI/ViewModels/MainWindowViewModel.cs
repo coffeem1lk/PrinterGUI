@@ -52,8 +52,13 @@ namespace PrinterGUI.ViewModels
         public bool IsSending { get => _isSending; set { _isSending = value; Notify(nameof(IsSending)); UpdateCanSend(); } }
 
         public bool CanSend => SelectedObject != null && !IsSending;
+        public bool CanPrintCustomGcode => !IsSending;
 
-        void UpdateCanSend() { Notify(nameof(CanSend)); }
+        void UpdateCanSend()
+        {
+            Notify(nameof(CanSend));
+            Notify(nameof(CanPrintCustomGcode));
+        }
 
         // public ICommand GenerateGcodeCommand { get; }
         public ICommand SendToPrinterCommand { get; }
