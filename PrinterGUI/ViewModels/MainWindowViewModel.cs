@@ -835,7 +835,7 @@ namespace PrinterGUI.ViewModels
             sb.AppendLine();
             sb.AppendLine("; Filament gcode");
             sb.AppendLine();
-            sb.AppendLine($"M221 S{extrusionSpeedPercent}\t; velocità estrusione");
+            sb.AppendLine($"M221 S45\t; velocità estrusione");
             sb.AppendLine("G21 \t\t; set units to millimeters");
             sb.AppendLine("G90 \t\t; use absolute coordinates");
             sb.AppendLine("M82 \t\t; use absolute distances for extrusion");
