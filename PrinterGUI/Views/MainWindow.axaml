@@ -32,23 +32,17 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Column="0" Margin="0,0,8,0">
-          <TextBlock Text="Models" FontWeight="Bold" Margin="4"/>
-          <ListBox ItemsSource="{Binding Objects}" SelectedItem="{Binding SelectedObject}" Height="360">
-            <ListBox.ItemTemplate>
-              <DataTemplate x:DataType="models:PrintObject">
-                <StackPanel Orientation="Vertical" Margin="6">
-                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                  <TextBlock Text="{Binding FileName}" FontSize="12" Foreground="Gray"/>
-                </StackPanel>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
+          <TextBlock Text="Print Type" FontWeight="Bold" Margin="4"/>
+            <ListBox ItemsSource="{Binding PrintTypes}"
+            SelectedItem="{Binding SelectedPrintType}"
+            Height="360"/>
         </StackPanel>
 
         <StackPanel Grid.Column="1">
           <TextBlock Text="Print Parameters" FontWeight="Bold" Margin="4"/>
 
-          <Grid Margin="0,6,0,0">
+          <!-- ODF -->
+          <Grid Margin="0,6,0,0" IsVisible="{Binding IsOdf}">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="1*"/>
               <ColumnDefinition Width="1*"/>
@@ -99,8 +93,60 @@
             </StackPanel>
 
             <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,6,0,0">
-              <TextBlock Text="Serial Port" Width="132" VerticalAlignment="Center"/>
-              <TextBox Text="{Binding SerialPortPath}" Width="160" Watermark="/dev/ttyUSB0 or /dev/ttyACM0"/>
+              <TextBlock Text="Size (mm)" Width="132" VerticalAlignment="Center"/>
+              <TextBox x:Name="OdfWidthTextBox" Text="{Binding OdfWidthMm}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+              <TextBlock Text="x" Margin="8,0" VerticalAlignment="Center"/>
+              <TextBox x:Name="OdfLengthTextBox" Text="{Binding OdfLengthMm}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+
+              <TextBlock Text="#" Margin="12,0,4,0" VerticalAlignment="Center"/>
+              <TextBox x:Name="OdfFilmCountTextBox" Text="{Binding OdfFilmCount}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0">
+              <Button Content="Set Probe Offset" Click="SetProbeOffset_Click" Width="160"/>
+            </StackPanel>
+          </Grid>
+
+          <!-- Gummies -->
+          <Grid Margin="0,6,0,0" IsVisible="{Binding IsGummies}">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="1*"/>
+              <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
+              <TextBlock Text="ml/gummy (ml)" Width="132" VerticalAlignment="Center"/>
+              <TextBox x:Name="MlPerGummyTextBox" Text="{Binding GummiesMlPerGummy}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
+              <TextBlock Text="mm/ml" Width="132" VerticalAlignment="Center"/>
+              <TextBox x:Name="MmPerMlTextBox" Text="{Binding GummiesMmPerMl}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
+              <TextBlock Text="wait between gummies (s)" Width="132" VerticalAlignment="Center"/>
+              <TextBox x:Name="WaitBetweenGummiesTextBox" Text="{Binding GummiesWaitBetweenSeconds}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
+              <TextBlock Text="extrusion speed (mm/min)" Width="132" VerticalAlignment="Center"/>
+              <TextBox x:Name="ExtrusionSpeedTextBox" Text="{Binding GummiesExtrusionSpeed}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
             <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0">
@@ -109,7 +155,6 @@
           </Grid>
 
           <StackPanel Orientation="Horizontal" Margin="0,12,0,0" HorizontalAlignment="Left" Spacing="8">
-            <!-- <Button Content="Generate G-code" Command="{Binding GenerateGcodeCommand}" Width="140" IsEnabled="{Binding CanSend}"/> -->
             <Button Content="Print Custom G-code"
                     Click="PrintCustomGcode_Click"
                     Width="180"

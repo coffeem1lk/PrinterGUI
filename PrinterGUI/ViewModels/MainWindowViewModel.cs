@@ -21,25 +21,53 @@ namespace PrinterGUI.ViewModels
 
         public ObservableCollection<PrintObject> Objects { get; } = new ObservableCollection<PrintObject>();
 
+        // NEW: print type list on the left
+        public ObservableCollection<string> PrintTypes { get; } = new() { "ODF", "Gummies" };
+
+        string? _selectedPrintType = "ODF";
+        public string? SelectedPrintType
+        {
+            get => _selectedPrintType;
+            set
+            {
+                _selectedPrintType = value;
+                Notify(nameof(SelectedPrintType));
+                Notify(nameof(IsOdf));
+                Notify(nameof(IsGummies));
+                ApplyDefaultModelForType();
+                UpdateCanSend();
+            }
+        }
+
+        public bool IsOdf => SelectedPrintType == "ODF";
+        public bool IsGummies => SelectedPrintType == "Gummies";
+
         PrintObject? _selectedObject;
         public PrintObject? SelectedObject { get => _selectedObject; set { _selectedObject = value; Notify(nameof(SelectedObject)); UpdateCanSend(); } }
 
         public string SerialPortPath { get; set; } = "/dev/ttyACM0";
 
-        // parameters
+        // ODF parameters
         public string ExtruderTemp { get; set; } = "0";
         public string DryingTemp { get; set; } = "0";
         public string LayerHeight { get; set; } = "0.3";
         public string Infill { get; set; } = "90";
         public string PrintSpeed { get; set; } = "11.5";
-
-        // new: drying time (minutes) stored as string for binding
         public string DryingTime { get; set; } = "0";
-
-        // new: Drying time RT (minutes) stored for post-processing only
         public string DryingTimeRT { get; set; } = "0";
 
-        // CLI binary (can remain default command if on PATH)
+        // NEW: ODF rectangle size (mm)
+        public string OdfWidthMm { get; set; } = "20";
+        public string OdfLengthMm { get; set; } = "30";
+
+        public string OdfFilmCount { get; set; } = "1";
+
+        // NEW: Gummies-specific fields
+        public string GummiesMlPerGummy { get; set; } = "0.3";
+        public string GummiesMmPerMl { get; set; } = "5";
+        public string GummiesWaitBetweenSeconds { get; set; } = "5";
+        public string GummiesExtrusionSpeed { get; set; } = "600";
+
         public string PrusaSlicerPath { get; set; } = "prusa-slicer";
 
         string _status = "Idle";
@@ -51,7 +79,8 @@ namespace PrinterGUI.ViewModels
         bool _isSending;
         public bool IsSending { get => _isSending; set { _isSending = value; Notify(nameof(IsSending)); UpdateCanSend(); } }
 
-        public bool CanSend => SelectedObject != null && !IsSending;
+        public bool CanSend => (IsOdf || IsGummies) ? !IsSending : SelectedObject != null && !IsSending;
+
         public bool CanPrintCustomGcode => !IsSending;
 
         void UpdateCanSend()
@@ -60,15 +89,13 @@ namespace PrinterGUI.ViewModels
             Notify(nameof(CanPrintCustomGcode));
         }
 
-        // public ICommand GenerateGcodeCommand { get; }
         public ICommand SendToPrinterCommand { get; }
 
         readonly SerialPrinterService _serial = new SerialPrinterService();
 
         CancellationTokenSource? _cts;
 
-        // Dynamic discovery fields
-        readonly string _modelsFolder = "/home/raspberrypie/stl"; // change to your folder
+        readonly string _modelsFolder = "/home/raspberrypie/stl";
         FileSystemWatcher? _watcher;
         readonly SynchronizationContext? _uiContext;
         Timer? _debounceTimer;
@@ -77,14 +104,21 @@ namespace PrinterGUI.ViewModels
         {
             _uiContext = SynchronizationContext.Current;
 
-            // Populate objects from disk
             LoadModels();
-
-            // Start watching the models folder to update the list live
             StartWatchingModelsFolder();
 
-            // GenerateGcodeCommand = new RelayCommand(async _ => await GenerateGcodeAsync());
             SendToPrinterCommand = new RelayCommand(async _ => await SendToPrinterAsync(), _ => CanSend);
+        }
+
+        void ApplyDefaultModelForType()
+        {
+            if (Objects.Count == 0 || string.IsNullOrWhiteSpace(SelectedPrintType))
+                return;
+
+            var match = Objects.FirstOrDefault(o =>
+                o.Name.Contains(SelectedPrintType, StringComparison.OrdinalIgnoreCase));
+
+            SelectedObject = match ?? Objects.FirstOrDefault();
         }
 
         void StartWatchingModelsFolder()
@@ -108,23 +142,14 @@ namespace PrinterGUI.ViewModels
                 _watcher.Renamed += renHandler;
                 _watcher.EnableRaisingEvents = true;
 
-                // create debounce timer but don't start it yet; 300ms debounce
                 _debounceTimer = new Timer(_ => LoadModels(), null, Timeout.Infinite, Timeout.Infinite);
             }
-            catch
-            {
-                // best-effort: don't crash VM if watcher can't be created
-            }
+            catch { }
         }
 
         void DebounceLoad()
         {
-            try
-            {
-                // reset timer to trigger once after 300ms of no changes
-                _debounceTimer?.Change(300, Timeout.Infinite);
-            }
-            catch { }
+            try { _debounceTimer?.Change(300, Timeout.Infinite); } catch { }
         }
 
         void LoadModels()
@@ -135,132 +160,93 @@ namespace PrinterGUI.ViewModels
                 if (Directory.Exists(_modelsFolder))
                     files = Directory.GetFiles(_modelsFolder, "*.stl", SearchOption.TopDirectoryOnly);
 
-                // Ensure collection modifications happen on UI thread
                 void Action()
                 {
                     Objects.Clear();
                     foreach (var f in files.OrderBy(Path.GetFileName))
                     {
-                        var po = new PrintObject
+                        Objects.Add(new PrintObject
                         {
                             Name = Path.GetFileNameWithoutExtension(f),
                             FileName = f,
                             WidthMm = 0,
                             DepthMm = 0,
                             HeightMm = 0
-                        };
-
-                        Objects.Add(po);
+                        });
                     }
-                    // keep selection valid
-                    if (SelectedObject != null && !Objects.Contains(SelectedObject))
-                        SelectedObject = Objects.FirstOrDefault();
+
+                    ApplyDefaultModelForType();
                 }
 
-                if (_uiContext != null)
-                    _uiContext.Post(_ => Action(), null);
-                else
-                    Action();
+                if (_uiContext != null) _uiContext.Post(_ => Action(), null);
+                else Action();
             }
-            catch
-            {
-                // ignore errors during scanning
-            }
+            catch { }
         }
-
-        // // Generate G-code file next to the STL (same folder) and leave it there
-        // async Task GenerateGcodeAsync()
-        // {
-        //     if (SelectedObject == null) { Status = "Select an object first"; return; }
-        //
-        //     if (!TryParseInputs(out int extruderTemp, out int dryingTemp, out double layerHeight, out int infill, out double printSpeed))
-        //         return;
-        //
-        //     Status = "Slicing (PrusaSlicer)...";
-        //     Progress = 0;
-        //
-        //     using var cts = new CancellationTokenSource();
-        //     var progressText = new Progress<string>(s => 
-        //     {
-        //         // Only show important messages, not every G-code line or comments
-        //         if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
-        //             Status = s;
-        //     });
-        //
-        //     try
-        //     {
-        //         string stlPath = SelectedObject.FileName;
-        //         if (!Path.IsPathRooted(stlPath))
-        //             stlPath = Path.Combine(_modelsFolder, stlPath);
-        //
-        //         string outPath = Path.Combine(Path.GetDirectoryName(stlPath) ?? _modelsFolder,
-        //             $"{Path.GetFileNameWithoutExtension(stlPath)}_{DateTime.Now:yyyyMMdd_HHmmss}.gcode");
-        //
-        //         int dryingTime = 0;
-        //         if (!int.TryParse(DryingTime, out dryingTime))
-        //         {
-        //             Status = "Invalid drying time";
-        //             return;
-        //         }
-        //
-        //         int dryingTimeRT = 0;
-        //         if (!int.TryParse(DryingTimeRT, out dryingTimeRT))
-        //         {
-        //             Status = "Invalid drying time RT";
-        //             return;
-        //         }
-        //
-        //         var result = await GcodeGenerator.SliceWithPrusaAsync(
-        //             stlPath,
-        //             outPath,
-        //             layerHeight,
-        //             infill,
-        //             extruderTemp,
-        //             dryingTemp,
-        //             dryingTime,
-        //             dryingTimeRT,
-        //             printSpeed,
-        //             prusaSlicerPath: PrusaSlicerPath,
-        //             profilePath: "/home/raspberrypie/config.ini",
-        //             extraArgs: null,
-        //             timeout: TimeSpan.FromMinutes(12),
-        //             outputProgress: progressText,
-        //             cancellationToken: cts.Token);
-        //
-        //         if (!result.Success)
-        //         {
-        //             Status = $"Slicing failed: {result.Error}";
-        //             return;
-        //         }
-        //
-        //         Status = $"G-code saved: {outPath}";
-        //         Progress = 100;
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         Status = $"Slicing failed: {ex.Message}";
-        //     }
-        // }
 
         // Generate temp gcode, send to printer, then delete the temp file and any older generated files for the selected model
         async Task SendToPrinterAsync()
         {
-            if (SelectedObject == null) { Status = "Select an object first"; return; }
+            if (!IsOdf && !IsGummies && SelectedObject == null)
+            {
+                Status = "Select an object first";
+                return;
+            }
 
             if (!TryParseInputs(out int extruderTemp, out int dryingTemp, out double layerHeight, out int infill, out double printSpeed))
                 return;
 
-            // Prepare model path early so deletion can target the model's folder after send
-            string stlPath = SelectedObject.FileName;
-            if (!Path.IsPathRooted(stlPath))
-                stlPath = Path.Combine(_modelsFolder, stlPath);
+            string stlPath = string.Empty;
+            bool cleanupByModel = !IsOdf && !IsGummies;
+
+            if (IsOdf)
+            {
+                if (!double.TryParse(OdfWidthMm, NumberStyles.Float, CultureInfo.InvariantCulture, out var widthMm) || widthMm <= 0)
+                {
+                    Status = "Invalid ODF width";
+                    return;
+                }
+
+                if (!double.TryParse(OdfLengthMm, NumberStyles.Float, CultureInfo.InvariantCulture, out var lengthMm) || lengthMm <= 0)
+                {
+                    Status = "Invalid ODF length";
+                    return;
+                }
+
+                if (!double.TryParse(LayerHeight, NumberStyles.Float, CultureInfo.InvariantCulture, out var thicknessMm) || thicknessMm <= 0)
+                {
+                    Status = "Invalid layer height";
+                    return;
+                }
+
+                if (!int.TryParse(OdfFilmCount, out var filmCount) || filmCount < 1 || filmCount > OdfMaxFilms)
+                {
+                    Status = $"Invalid ODF film count (1-{OdfMaxFilms})";
+                    return;
+                }
+
+                if (!TryBuildOdfFilmOrigins(widthMm, lengthMm, filmCount, out var filmOrigins, out var layoutError))
+                {
+                    Status = layoutError;
+                    return;
+                }
+
+                stlPath = Path.Combine(Path.GetTempPath(), $"odf_rect_{Guid.NewGuid():N}.stl");
+                WriteOdfLayoutStl(stlPath, widthMm, lengthMm, thicknessMm, filmOrigins);
+            }
+            else if (!IsGummies)
+            {
+                stlPath = SelectedObject!.FileName;
+                if (!Path.IsPathRooted(stlPath))
+                    stlPath = Path.Combine(_modelsFolder, stlPath);
+            }
 
             // create temp gcode via slicer
             string tempPath = Path.Combine(Path.GetTempPath(), $"print_{Guid.NewGuid():N}.gcode");
             IsSending = true;
             _cts = new CancellationTokenSource();
             Progress = 0;
-            Status = "Slicing (PrusaSlicer) before send...";
+            Status = IsGummies ? "Generating Gummies G-code..." : "Slicing (PrusaSlicer) before send...";
 
             var slicerProgress = new Progress<string>(s =>
             {
@@ -270,82 +256,134 @@ namespace PrinterGUI.ViewModels
 
             try
             {
-                // ensure dryingTime is passed in the correct position (7th parameter) and printSpeed stays double
-                int dryingTime = 0;
-                if (!int.TryParse(DryingTime, out dryingTime))
+                if (IsGummies)
                 {
-                    Status = "Invalid drying time";
-                    IsSending = false;
-                    return;
-                }
-
-                int dryingTimeRT = 0;
-                if (!int.TryParse(DryingTimeRT, out dryingTimeRT))
-                {
-                    Status = "Invalid drying time RT";
-                    IsSending = false;
-                    return;
-                }
-
-                var resultPath = await GcodeGenerator.SliceWithPrusaAsync(
-                    stlPath,
-                    tempPath,
-                    layerHeight,
-                    infill,
-                    extruderTemp,
-                    dryingTemp,    // 6th param
-                    dryingTime,    // 7th param (int)
-                    dryingTimeRT,  // new param (RT)
-                    printSpeed,    // 9th param (double)
-                    prusaSlicerPath: PrusaSlicerPath,
-                    profilePath: "/home/raspberrypie/config.ini",
-                    extraArgs: null,
-                    timeout: TimeSpan.FromMinutes(12),
-                    outputProgress: slicerProgress,
-                    cancellationToken: _cts.Token).ConfigureAwait(false);
-
-                if (!resultPath.Success)
-                {
-                    Status = "Slicing failed: " + (string.IsNullOrWhiteSpace(resultPath.Error) ? resultPath.Output : resultPath.Error);
-                    IsSending = false;
-                    return;
-                }
-
-                // Save copy to /home/raspberrypie/gcode/ immediately after successful slicing
-                try
-                {
-                    string gcodeFolder = "/home/raspberrypie/gcode";
-
-                    // Ensure folder exists
-                    if (!Directory.Exists(gcodeFolder))
+                    if (!double.TryParse(GummiesMlPerGummy, NumberStyles.Float, CultureInfo.InvariantCulture, out var mlPerGummy) || mlPerGummy <= 0)
                     {
-                        Directory.CreateDirectory(gcodeFolder);
+                        Status = "Invalid ml/gummy (ml)";
+                        IsSending = false;
+                        return;
                     }
 
-                    string modelName = Path.GetFileNameWithoutExtension(stlPath);
-                    string copyPath = Path.Combine(gcodeFolder, $"{modelName}_{DateTime.Now:yyyyMMdd_HHmmss}.gcode");
-
-                    File.Copy(tempPath, copyPath, overwrite: true);
-
-                    // Update status on UI thread
-                    _uiContext?.Post(_ =>
+                    if (!double.TryParse(GummiesMmPerMl, NumberStyles.Float, CultureInfo.InvariantCulture, out var mmPerMl) || mmPerMl <= 0)
                     {
-                        Status = $"G-code saved: {Path.GetFileName(copyPath)}. Starting send...";
-                    }, null);
+                        Status = "Invalid mm/ml";
+                        IsSending = false;
+                        return;
+                    }
+
+                    if (!int.TryParse(GummiesWaitBetweenSeconds, NumberStyles.Integer, CultureInfo.InvariantCulture, out var waitSeconds) || waitSeconds < 0)
+                    {
+                        Status = "Invalid wait between gummies (s)";
+                        IsSending = false;
+                        return;
+                    }
+
+                    if (!int.TryParse(GummiesExtrusionSpeed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var extrusionSpeedPercent) || extrusionSpeedPercent <= 0)
+                    {
+                        Status = "Invalid extrusion speed";
+                        IsSending = false;
+                        return;
+                    }
+
+                    var extrusionAmount = -(mlPerGummy * mmPerMl);
+                    var gummiesGcode = BuildGummiesGcode(extrusionAmount, waitSeconds, extrusionSpeedPercent);
+                    await File.WriteAllTextAsync(tempPath, gummiesGcode, _cts.Token).ConfigureAwait(false);
+
+                    try
+                    {
+                        string gcodeFolder = "/home/raspberrypie/gcode";
+                        if (!Directory.Exists(gcodeFolder))
+                            Directory.CreateDirectory(gcodeFolder);
+
+                        string copyPath = Path.Combine(gcodeFolder, $"gummies_{DateTime.Now:yyyyMMdd_HHmmss}.gcode");
+                        File.Copy(tempPath, copyPath, overwrite: true);
+
+                        _uiContext?.Post(_ =>
+                        {
+                            Status = $"G-code saved: {Path.GetFileName(copyPath)}. Starting send...";
+                        }, null);
+                    }
+                    catch (Exception ex)
+                    {
+                        _uiContext?.Post(_ =>
+                        {
+                            Status = $"Warning: G-code copy failed ({ex.Message}). Continuing with send...";
+                        }, null);
+                        await Task.Delay(1000);
+                    }
                 }
-                catch (Exception ex)
+                else
                 {
-                    // Don't fail the operation if copy fails, but log it
-                    _uiContext?.Post(_ =>
+                    int dryingTime = 0;
+                    if (!int.TryParse(DryingTime, out dryingTime))
                     {
-                        Status = $"Warning: G-code copy failed ({ex.Message}). Continuing with send...";
-                    }, null);
-                    await Task.Delay(1000); // Brief pause so user can see the warning
+                        Status = "Invalid drying time";
+                        IsSending = false;
+                        return;
+                    }
+
+                    int dryingTimeRT = 0;
+                    if (!int.TryParse(DryingTimeRT, out dryingTimeRT))
+                    {
+                        Status = "Invalid drying time RT";
+                        IsSending = false;
+                        return;
+                    }
+
+                    var resultPath = await GcodeGenerator.SliceWithPrusaAsync(
+                        stlPath,
+                        tempPath,
+                        layerHeight,
+                        infill,
+                        extruderTemp,
+                        dryingTemp,
+                        dryingTime,
+                        dryingTimeRT,
+                        printSpeed,
+                        prusaSlicerPath: PrusaSlicerPath,
+                        profilePath: "/home/raspberrypie/config.ini",
+                        extraArgs: null,
+                        timeout: TimeSpan.FromMinutes(12),
+                        outputProgress: slicerProgress,
+                        cancellationToken: _cts.Token).ConfigureAwait(false);
+
+                    if (!resultPath.Success)
+                    {
+                        Status = "Slicing failed: " + (string.IsNullOrWhiteSpace(resultPath.Error) ? resultPath.Output : resultPath.Error);
+                        IsSending = false;
+                        return;
+                    }
+
+                    try
+                    {
+                        string gcodeFolder = "/home/raspberrypie/gcode";
+                        if (!Directory.Exists(gcodeFolder))
+                            Directory.CreateDirectory(gcodeFolder);
+
+                        string modelName = Path.GetFileNameWithoutExtension(stlPath);
+                        string copyPath = Path.Combine(gcodeFolder, $"{modelName}_{DateTime.Now:yyyyMMdd_HHmmss}.gcode");
+
+                        File.Copy(tempPath, copyPath, overwrite: true);
+
+                        _uiContext?.Post(_ =>
+                        {
+                            Status = $"G-code saved: {Path.GetFileName(copyPath)}. Starting send...";
+                        }, null);
+                    }
+                    catch (Exception ex)
+                    {
+                        _uiContext?.Post(_ =>
+                        {
+                            Status = $"Warning: G-code copy failed ({ex.Message}). Continuing with send...";
+                        }, null);
+                        await Task.Delay(1000);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Status = "Slicing failed: " + ex.Message;
+                Status = (IsGummies ? "G-code generation failed: " : "Slicing failed: ") + ex.Message;
                 IsSending = false;
                 _cts?.Dispose();
                 _cts = null;
@@ -355,7 +393,6 @@ namespace PrinterGUI.ViewModels
             Status = "Opening serial port...";
             var progText = new Progress<string>(s =>
             {
-                // Only show important messages during send
                 if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
                     Status = s;
             });
@@ -378,12 +415,15 @@ namespace PrinterGUI.ViewModels
                 _cts?.Dispose();
                 _cts = null;
 
-                // Delete temp file
                 try { File.Delete(tempPath); } catch { }
 
-                if (sendSucceeded)
+                if (IsOdf && !string.IsNullOrWhiteSpace(stlPath))
                 {
-                    // Clean up older generated files for the same model
+                    try { File.Delete(stlPath); } catch { }
+                }
+
+                if (sendSucceeded && cleanupByModel && !string.IsNullOrWhiteSpace(stlPath))
+                {
                     _ = Task.Run(async () =>
                     {
                         await DeleteOldGeneratedFilesAsync(stlPath).ConfigureAwait(false);
@@ -564,11 +604,40 @@ namespace PrinterGUI.ViewModels
         bool TryParseInputs(out int extruderTemp, out int dryingTemp, out double layerHeight, out int infill, out double printSpeed)
         {
             extruderTemp = 0; dryingTemp = 0; layerHeight = 0; infill = 0; printSpeed = 0;
+
+            if (IsGummies)
+            {
+                // Gummies fields mapped to existing pipeline variables
+                if (!double.TryParse(GummiesMlPerGummy, NumberStyles.Float, CultureInfo.InvariantCulture, out layerHeight))
+                {
+                    Status = "Invalid ml/gummy (ml)";
+                    return false;
+                }
+
+                if (!int.TryParse(GummiesWaitBetweenSeconds, out dryingTemp))
+                {
+                    Status = "Invalid wait between gummies (s)";
+                    return false;
+                }
+
+                if (!int.TryParse(GummiesExtrusionSpeed, out infill))
+                {
+                    Status = "Invalid extrusion speed";
+                    return false;
+                }
+
+                // not used by gummies flow, but required downstream
+                printSpeed = 0;
+                return true;
+            }
+
+            // ODF (existing behavior)
             if (!int.TryParse(ExtruderTemp, out extruderTemp)) { Status = "Invalid extruder temp"; return false; }
             if (!int.TryParse(DryingTemp, out dryingTemp)) { Status = "Invalid drying temp"; return false; }
-            if (!double.TryParse(LayerHeight, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out layerHeight)) { Status = "Invalid layer height"; return false; }
+            if (!double.TryParse(LayerHeight, NumberStyles.Float, CultureInfo.InvariantCulture, out layerHeight)) { Status = "Invalid layer height"; return false; }
             if (!int.TryParse(Infill, out infill)) { Status = "Invalid infill"; return false; }
-            if (!double.TryParse(PrintSpeed, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out printSpeed)) { Status = "Invalid print speed"; return false; }
+            if (!double.TryParse(PrintSpeed, NumberStyles.Float, CultureInfo.InvariantCulture, out printSpeed)) { Status = "Invalid print speed"; return false; }
+
             return true;
         }
 
@@ -641,5 +710,177 @@ namespace PrinterGUI.ViewModels
                 _cts = null;
             }
         }
+
+        private static bool TryBuildOdfFilmOrigins(
+            double widthMm,
+            double lengthMm,
+            int filmCount,
+            out List<(double x, double y)> origins,
+            out string error)
+        {
+            origins = new List<(double x, double y)>(filmCount);
+            error = string.Empty;
+
+            if (filmCount < 1 || filmCount > OdfMaxFilms)
+            {
+                error = $"ODF film count must be between 1 and {OdfMaxFilms}.";
+                return false;
+            }
+
+            // 1st film: top-left corner
+            var firstY = OdfBedYMaxMm - lengthMm;
+            if (firstY < 0)
+            {
+                error = $"Film length ({lengthMm} mm) exceeds bed Y ({OdfBedYMaxMm} mm).";
+                return false;
+            }
+            origins.Add((0.0, firstY));
+
+            if (filmCount >= 2)
+            {
+                // 2nd film: bottom-left corner
+                origins.Add((0.0, 0.0));
+            }
+
+            // 3rd+ films: same Y as second, moving +X with 10 mm spacing
+            for (int i = 3; i <= filmCount; i++)
+            {
+                var x = (i - 2) * (widthMm + OdfGapMm);
+                origins.Add((x, 0.0));
+            }
+
+            // bounds check
+            foreach (var (x, y) in origins)
+            {
+                if (x < 0 || y < 0 || (x + widthMm) > OdfBedXMaxMm || (y + lengthMm) > OdfBedYMaxMm)
+                {
+                    error = $"ODF layout does not fit bed ({OdfBedXMaxMm} x {OdfBedYMaxMm} mm) with {filmCount} film(s).";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static void WriteOdfLayoutStl(
+            string path,
+            double width,
+            double length,
+            double height,
+            IReadOnlyList<(double x, double y)> origins)
+        {
+            using var w = new StreamWriter(path, false);
+            w.WriteLine("solid odf_layout");
+
+            foreach (var (ox, oy) in origins)
+            {
+                WriteBoxAt(w, ox, oy, width, length, height);
+            }
+
+            w.WriteLine("endsolid odf_layout");
+        }
+
+        private static void WriteBoxAt(StreamWriter w, double ox, double oy, double width, double length, double height)
+        {
+            var x0 = ox;              var x1 = ox + width;
+            var y0 = oy;              var y1 = oy + length;
+            var z0 = 0.0;             var z1 = height;
+
+            void Tri((double x, double y, double z) a, (double x, double y, double z) b, (double x, double y, double z) c)
+            {
+                w.WriteLine("facet normal 0 0 0");
+                w.WriteLine("  outer loop");
+                w.WriteLine($"    vertex {a.x.ToString(CultureInfo.InvariantCulture)} {a.y.ToString(CultureInfo.InvariantCulture)} {a.z.ToString(CultureInfo.InvariantCulture)}");
+                w.WriteLine($"    vertex {b.x.ToString(CultureInfo.InvariantCulture)} {b.y.ToString(CultureInfo.InvariantCulture)} {b.z.ToString(CultureInfo.InvariantCulture)}");
+                w.WriteLine($"    vertex {c.x.ToString(CultureInfo.InvariantCulture)} {c.y.ToString(CultureInfo.InvariantCulture)} {c.z.ToString(CultureInfo.InvariantCulture)}");
+                w.WriteLine("  endloop");
+                w.WriteLine("endfacet");
+            }
+
+            // bottom
+            Tri((x0, y0, z0), (x1, y0, z0), (x1, y1, z0));
+            Tri((x0, y0, z0), (x1, y1, z0), (x0, y1, z0));
+
+            // top
+            Tri((x0, y0, z1), (x1, y1, z1), (x1, y0, z1));
+            Tri((x0, y0, z1), (x0, y1, z1), (x1, y1, z1));
+
+            // front
+            Tri((x0, y0, z0), (x1, y0, z1), (x1, y0, z0));
+            Tri((x0, y0, z0), (x0, y0, z1), (x1, y0, z1));
+
+            // back
+            Tri((x0, y1, z0), (x1, y1, z0), (x1, y1, z1));
+            Tri((x0, y1, z0), (x1, y1, z1), (x0, y1, z1));
+
+            // left
+            Tri((x0, y0, z0), (x0, y1, z0), (x0, y1, z1));
+            Tri((x0, y0, z0), (x0, y1, z1), (x0, y0, z1));
+
+            // right
+            Tri((x1, y0, z0), (x1, y1, z1), (x1, y1, z0));
+            Tri((x1, y0, z0), (x1, y0, z1), (x1, y1, z1));
+        }
+
+        private static string BuildGummiesGcode(double extrusionAmount, int waitSeconds, int extrusionSpeedPercent)
+        {
+            var ci = CultureInfo.InvariantCulture;
+            var sb = new System.Text.StringBuilder();
+
+            sb.AppendLine("T1\t\t; select E1 (oven door)");
+            sb.AppendLine("G92 E0");
+            sb.AppendLine("G1 E-17 F1000\t; open oven door");
+            sb.AppendLine("T0\t\t; select E0 (extruder)");
+            sb.AppendLine("G28\t\t; home all axes");
+            sb.AppendLine();
+            sb.AppendLine("; Filament gcode");
+            sb.AppendLine();
+            sb.AppendLine($"M221 S{extrusionSpeedPercent}\t; velocità estrusione");
+            sb.AppendLine("G21 \t\t; set units to millimeters");
+            sb.AppendLine("G90 \t\t; use absolute coordinates");
+            sb.AppendLine("M82 \t\t; use absolute distances for extrusion");
+            sb.AppendLine("G92 E0");
+            sb.AppendLine();
+            sb.AppendLine("; layer change");
+            sb.AppendLine();
+
+            (double X, double Y)[] points =
+            {
+        (8.1, 79.825), (8.1, 101.825), (8.1, 123.825),
+        (28.767, 123.825), (28.767, 101.825), (28.767, 79.825),
+        (49.434, 79.825), (49.434, 101.825), (49.434, 123.825),
+        (70.101, 123.825), (70.101, 101.825), (70.101, 79.825)
+    };
+
+            for (int i = 0; i < points.Length; i++)
+            {
+                var p = points[i];
+                sb.AppendLine("G92 E0");
+                sb.AppendLine("G1 E-1 F1000");
+                sb.AppendLine($"G1 X{p.X.ToString("0.###", ci)} Y{p.Y.ToString("0.###", ci)} F4998.000\t; {i + 1}");
+                sb.AppendLine("G1 Z0 F800");
+                sb.AppendLine($"G1 E{extrusionAmount.ToString("0.###", ci)} F{extrusionSpeedPercent}");
+                sb.AppendLine("G92 E0");
+                sb.AppendLine("G1 E-1 F1000");
+                sb.AppendLine($"G4 S{waitSeconds}");
+                sb.AppendLine("G1 Z3 F800");
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("; final steps");
+            sb.AppendLine();
+            sb.AppendLine("G28 X0 Y0");
+            sb.AppendLine("T1\t\t; select E1 (oven door)");
+            sb.AppendLine("G92 E0");
+            sb.AppendLine("G1 E17 F1000\t; close oven door");
+            sb.AppendLine("M84\t\t; disable motors");
+
+            return sb.ToString();
+        }
+
+        private const double OdfBedXMaxMm = 261.0;
+        private const double OdfBedYMaxMm = 132.0; // if your Y max is really 261, set this to 261.0
+        private const double OdfGapMm = 10.0;
+        private const int OdfMaxFilms = 12;
     }
 }

@@ -1,13 +1,17 @@
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using PrinterGUI.ViewModels;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using System.Linq;
+using System.Numerics;
+using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
+using static System.Net.WebRequestMethods;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace PrinterGUI.Views
 {
@@ -32,7 +36,16 @@ namespace PrinterGUI.Views
                 this.FindControl<TextBox>("InfillTextBox"),
                 this.FindControl<TextBox>("DryingTimeTextBox"),
                 this.FindControl<TextBox>("PrintSpeedTextBox"),
-                this.FindControl<TextBox>("DryingTimeRTTextBox")
+                this.FindControl<TextBox>("DryingTimeRTTextBox"),
+                this.FindControl<TextBox>("OdfWidthTextBox"),
+                this.FindControl<TextBox>("OdfLengthTextBox"),
+                this.FindControl<TextBox>("OdfFilmCountTextBox"),
+
+                // Gummies
+                this.FindControl<TextBox>("MlPerGummyTextBox"),
+                this.FindControl<TextBox>("WaitBetweenGummiesTextBox"),
+                this.FindControl<TextBox>("ExtrusionSpeedTextBox"),
+                this.FindControl<TextBox>("MmPerMlTextBox"),
             };
 
             foreach (var tb in textboxesToBind.Where(t => t != null))
