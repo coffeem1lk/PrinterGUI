@@ -50,7 +50,7 @@ namespace PrinterGUI.ViewModels
         // ODF parameters
         public string ExtruderTemp { get; set; } = "0";
         public string DryingTemp { get; set; } = "0";
-        public string LayerHeight { get; set; } = "0.3";
+        public string LayerHeight { get; set; } = "1";
         public string Infill { get; set; } = "90";
         public string PrintSpeed { get; set; } = "11.5";
         public string DryingTime { get; set; } = "0";
@@ -87,6 +87,7 @@ namespace PrinterGUI.ViewModels
         {
             Notify(nameof(CanSend));
             Notify(nameof(CanPrintCustomGcode));
+            Notify(nameof(CanStop));
         }
 
         public ICommand SendToPrinterCommand { get; }
@@ -108,6 +109,7 @@ namespace PrinterGUI.ViewModels
             StartWatchingModelsFolder();
 
             SendToPrinterCommand = new RelayCommand(async _ => await SendToPrinterAsync(), _ => CanSend);
+            StopPrintCommand = new RelayCommand(async _ => await StopPrintAsync(), _ => CanStop);
         }
 
         void ApplyDefaultModelForType()
@@ -405,6 +407,10 @@ namespace PrinterGUI.ViewModels
                 Status = "Send complete";
                 sendSucceeded = true;
             }
+            catch (OperationCanceledException)
+            {
+                Status = "Send stopped";
+            }
             catch (Exception ex)
             {
                 Status = "Send failed: " + ex.Message;
@@ -601,6 +607,9 @@ namespace PrinterGUI.ViewModels
             }
         }
 
+        public bool CanStop => IsSending;
+        public ICommand StopPrintCommand { get; }
+
         bool TryParseInputs(out int extruderTemp, out int dryingTemp, out double layerHeight, out int infill, out double printSpeed)
         {
             extruderTemp = 0; dryingTemp = 0; layerHeight = 0; infill = 0; printSpeed = 0;
@@ -698,6 +707,10 @@ namespace PrinterGUI.ViewModels
             {
                 await _serial.SendFileAsync(gcodePath, SerialPortPath, 115200, progText, progPercent, _cts.Token);
                 Status = "Custom G-code send complete";
+            }
+            catch (OperationCanceledException)
+            {
+                Status = "Custom G-code send stopped";
             }
             catch (Exception ex)
             {
@@ -882,5 +895,16 @@ namespace PrinterGUI.ViewModels
         private const double OdfBedYMaxMm = 132.0; // if your Y max is really 261, set this to 261.0
         private const double OdfGapMm = 10.0;
         private const int OdfMaxFilms = 12;
+
+        async Task StopPrintAsync()
+        {
+            if (!IsSending)
+                return;
+
+            Status = "Stopping...";
+            try { _cts?.Cancel(); } catch { }
+
+            await Task.CompletedTask;
+        }
     }
 }

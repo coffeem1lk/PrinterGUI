@@ -33,9 +33,9 @@
 
         <StackPanel Grid.Column="0" Margin="0,0,8,0">
           <TextBlock Text="Print Type" FontWeight="Bold" Margin="4"/>
-            <ListBox ItemsSource="{Binding PrintTypes}"
-            SelectedItem="{Binding SelectedPrintType}"
-            Height="360"/>
+          <ListBox ItemsSource="{Binding PrintTypes}"
+                   SelectedItem="{Binding SelectedPrintType}"
+                   Height="360"/>
         </StackPanel>
 
         <StackPanel Grid.Column="1">
@@ -49,7 +49,6 @@
             </Grid.ColumnDefinitions>
 
             <Grid.RowDefinitions>
-              <RowDefinition Height="Auto"/>
               <RowDefinition Height="Auto"/>
               <RowDefinition Height="Auto"/>
               <RowDefinition Height="Auto"/>
@@ -104,10 +103,6 @@
               <TextBox x:Name="OdfFilmCountTextBox" Text="{Binding OdfFilmCount}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
-
-            <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0">
-              <Button Content="Set Probe Offset" Click="SetProbeOffset_Click" Width="160"/>
-            </StackPanel>
           </Grid>
 
           <!-- Gummies -->
@@ -118,7 +113,6 @@
             </Grid.ColumnDefinitions>
 
             <Grid.RowDefinitions>
-              <RowDefinition Height="Auto"/>
               <RowDefinition Height="Auto"/>
               <RowDefinition Height="Auto"/>
               <RowDefinition Height="Auto"/>
@@ -148,20 +142,56 @@
               <TextBox x:Name="ExtrusionSpeedTextBox" Text="{Binding GummiesExtrusionSpeed}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
-
-            <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0">
-              <Button Content="Set Probe Offset" Click="SetProbeOffset_Click" Width="160"/>
-            </StackPanel>
           </Grid>
 
-          <StackPanel Orientation="Horizontal" Margin="0,12,0,0" HorizontalAlignment="Left" Spacing="8">
-            <Button Content="Print Custom G-code"
+          <!-- Global actions: 2 rows (inverted) -->
+          <Grid Margin="0,12,0,0" HorizontalAlignment="Left">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="180"/>
+              <ColumnDefinition Width="140"/>
+              <ColumnDefinition Width="140"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Row 1: Set Probe + STOP -->
+            <Button Grid.Row="0" Grid.Column="0"
+                    Content="Set Probe Offset"
+                    Click="SetProbeOffset_Click"
+                    Width="160"/>
+
+            <Button Grid.Row="0" Grid.Column="2"
+                    Content="STOP"
+                    Width="140"
+                    Margin="8,0,0,0"
+                    Background="#C62828"
+                    Foreground="White"
+                    Command="{Binding StopPrintCommand}"
+                    IsEnabled="{Binding CanStop}"/>
+
+            <!-- Row 2: Print Custom + Print + Axis -->
+            <Button Grid.Row="1" Grid.Column="0"
+                    Content="Print Custom G-code"
                     Click="PrintCustomGcode_Click"
                     Width="180"
+                    Margin="0,8,0,0"
                     IsEnabled="{Binding CanPrintCustomGcode}"/>
-            <Button Content="Print" Click="SendToPrinter_Click" Width="140" IsEnabled="{Binding CanSend}"/>
-            <Button Content="Axis Control" Click="AxisControl_Click" Width="140" Margin="8,0,0,0"/>
-          </StackPanel>
+
+            <Button Grid.Row="1" Grid.Column="1"
+                    Content="Print"
+                    Click="SendToPrinter_Click"
+                    Width="140"
+                    Margin="8,8,0,0"
+                    IsEnabled="{Binding CanSend}"/>
+
+            <Button Grid.Row="1" Grid.Column="2"
+                    Content="Axis Control"
+                    Click="AxisControl_Click"
+                    Width="140"
+                    Margin="8,8,0,0"/>
+          </Grid>
 
           <TextBlock Text="{Binding Status}" Foreground="Gray" TextWrapping="Wrap" Margin="4" Height="60"/>
           <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="14" Margin="4,6,4,0"/>
@@ -171,11 +201,11 @@
 
     <!-- Overlay numeric keyboard (Microfluidics-style) -->
     <controls:NumericKeyboard x:Name="NumericKeyboard"
-                          IsVisible="False"
-                          Grid.RowSpan="3"
-                          HorizontalAlignment="Right"
-                          VerticalAlignment="Center"
-                          Margin="0,0,12,0"/>
+                              IsVisible="False"
+                              Grid.RowSpan="3"
+                              HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Margin="0,0,12,0"/>
 
     <Border Grid.Row="2" Background="#111" Padding="8">
       <TextBlock Text="Ready" Foreground="White" HorizontalAlignment="Left" />
