@@ -286,7 +286,7 @@ namespace PrinterGUI.ViewModels
                         return;
                     }
 
-                    var extrusionAmount = -(mlPerGummy * mmPerMl);
+                    var extrusionAmount = mlPerGummy * mmPerMl;
                     var gummiesGcode = BuildGummiesGcode(extrusionAmount, waitSeconds, extrusionSpeedPercent);
                     await File.WriteAllTextAsync(tempPath, gummiesGcode, _cts.Token).ConfigureAwait(false);
 
