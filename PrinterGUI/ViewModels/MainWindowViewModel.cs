@@ -51,6 +51,18 @@ namespace PrinterGUI.ViewModels
         // ODF parameters
         public string ExtruderTemp { get; set; } = "0";
         public string DryingTemp { get; set; } = "0";
+
+        // NEW: actual oven temperature shown in UI
+        string _ovenTemperatureC = "--";
+        public string OvenTemperatureC
+        {
+            get => _ovenTemperatureC;
+            set { _ovenTemperatureC = value; Notify(nameof(OvenTemperatureC)); }
+        }
+
+        bool _isOdfDryingPhase;
+        DateTime _lastOvenTempUpdateUtc = DateTime.MinValue;
+
         public string LayerHeight { get; set; } = "0.3";
         public string Infill { get; set; } = "90";
         public string PrintSpeed { get; set; } = "11.5";
@@ -207,6 +219,7 @@ namespace PrinterGUI.ViewModels
 
             string stlPath = string.Empty;
             bool cleanupByModel = !IsOdf && !IsGummies;
+            bool isOdfJob = IsOdf;
 
             if (IsOdf)
             {
@@ -257,10 +270,40 @@ namespace PrinterGUI.ViewModels
             Progress = 0;
             Status = IsGummies ? "Generating Gummies G-code..." : "Slicing (PrusaSlicer) before send...";
 
+            if (IsOdf)
+            {
+                _isOdfDryingPhase = false;
+                _lastOvenTempUpdateUtc = DateTime.MinValue;
+                OvenTemperatureC = "--";
+            }
             var slicerProgress = new Progress<string>(s =>
             {
-                if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
-                    Status = s;
+                var msg = s?.Trim() ?? string.Empty;
+
+                if (isOdfJob)
+                {
+                    if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase) ||
+                        msg.StartsWith("> G4 ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isOdfDryingPhase = true;
+                    }
+
+                    if (_isOdfDryingPhase && TryExtractOvenTemperatureC(msg, out var tempC))
+                    {
+                        var now = DateTime.UtcNow;
+                        if ((now - _lastOvenTempUpdateUtc).TotalMilliseconds >= 1000)
+                        {
+                            OvenTemperatureC = tempC.ToString("0.0", CultureInfo.InvariantCulture);
+                            _lastOvenTempUpdateUtc = now;
+                        }
+                    }
+
+                    if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
+                        _isOdfDryingPhase = false;
+                }
+
+                if (!msg.StartsWith("G") && !msg.StartsWith("M") && !msg.StartsWith(">") && !msg.StartsWith(";"))
+                    Status = msg;
             });
 
             try
@@ -436,8 +479,32 @@ namespace PrinterGUI.ViewModels
             Status = "Opening serial port...";
             var progText = new Progress<string>(s =>
             {
-                if (!s.StartsWith("G") && !s.StartsWith("M") && !s.StartsWith(">") && !s.StartsWith(";"))
-                    Status = s;
+                var msg = s?.Trim() ?? string.Empty;
+
+                if (isOdfJob)
+                {
+                    if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase) ||
+                        msg.StartsWith("> G4 ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isOdfDryingPhase = true;
+                    }
+
+                    if (_isOdfDryingPhase && TryExtractOvenTemperatureC(msg, out var tempC))
+                    {
+                        var now = DateTime.UtcNow;
+                        if ((now - _lastOvenTempUpdateUtc).TotalMilliseconds >= 1000)
+                        {
+                            OvenTemperatureC = tempC.ToString("0.0", CultureInfo.InvariantCulture);
+                            _lastOvenTempUpdateUtc = now;
+                        }
+                    }
+
+                    if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
+                        _isOdfDryingPhase = false;
+                }
+
+                if (!msg.StartsWith("G") && !msg.StartsWith("M") && !msg.StartsWith(">") && !msg.StartsWith(";"))
+                    Status = msg;
             });
             var progPercent = new Progress<int>(p => Progress = p);
 
@@ -476,6 +543,12 @@ namespace PrinterGUI.ViewModels
                         await DeleteOldGeneratedFilesAsync(stlPath).ConfigureAwait(false);
                     });
                 }
+                if (isOdfJob)
+                {
+                    _isOdfDryingPhase = false;
+                    _lastOvenTempUpdateUtc = DateTime.MinValue;
+                    OvenTemperatureC = "--";
+                }
             }
         }
 
@@ -489,7 +562,7 @@ namespace PrinterGUI.ViewModels
                 if (!Directory.Exists(dir))
                     return;
 
-                // Generated-file pattern: BaseName_yyyyMMdd_HHmmss.gcode
+                // Generated-file pattern: BaseName_yyyyMMdd_HHmms.gcode
                 var pattern = new Regex("^" + Regex.Escape(baseName) + @"_(\d{8}_\d{6})\.gcode$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
                 var candidates = Directory.GetFiles(dir, baseName + "_*.gcode", SearchOption.TopDirectoryOnly);
@@ -938,6 +1011,7 @@ namespace PrinterGUI.ViewModels
             sb.AppendLine("T1\t\t; select E1 (oven door)");
             sb.AppendLine("G92 E0");
             sb.AppendLine("G1 E17 F1000\t; close oven door");
+            sb.AppendLine("M107");
             sb.AppendLine("M84\t\t; disable motors");
 
             return sb.ToString();
@@ -1053,6 +1127,36 @@ namespace PrinterGUI.ViewModels
             if (Blister6Present) selected.Add(6);
 
             return selected;
+        }
+
+        private static bool TryExtractTempAfterToken(string line, string token, out double tempC)
+        {
+            tempC = 0;
+            var idx = line.IndexOf(token, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return false;
+
+            idx += token.Length;
+            int end = idx;
+            while (end < line.Length && ("0123456789+-.").IndexOf(line[end]) >= 0) end++;
+
+            if (end <= idx) return false;
+
+            return double.TryParse(
+                line[idx..end],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out tempC);
+        }
+
+        private static bool TryExtractOvenTemperatureC(string line, out double tempC)
+        {
+            // Prefer chamber-like token if firmware exposes it, then bed, then tool.
+            if (TryExtractTempAfterToken(line, "C:", out tempC)) return true;
+            if (TryExtractTempAfterToken(line, "B:", out tempC)) return true;
+            if (TryExtractTempAfterToken(line, "T:", out tempC)) return true;
+
+            tempC = 0;
+            return false;
         }
     }
 }
