@@ -51,7 +51,7 @@ namespace PrinterGUI.ViewModels
         // ODF parameters
         public string ExtruderTemp { get; set; } = "0";
         public string DryingTemp { get; set; } = "0";
-        public string LayerHeight { get; set; } = "1";
+        public string LayerHeight { get; set; } = "0.3";
         public string Infill { get; set; } = "90";
         public string PrintSpeed { get; set; } = "11.5";
         public string DryingTime { get; set; } = "0";
