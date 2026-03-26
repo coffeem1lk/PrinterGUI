@@ -704,7 +704,22 @@ namespace PrinterGUI.ViewModels
 
             public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
             public event EventHandler? CanExecuteChanged;
-            public async void Execute(object? parameter) => await (_executeAsync?.Invoke(parameter) ?? Task.CompletedTask);
+            public async void Execute(object? parameter)
+            {
+                try
+                {
+                    await (_executeAsync?.Invoke(parameter) ?? Task.CompletedTask);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when STOP cancels the current print.
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Command execution error: {ex}");
+                    // Prevent app shutdown from async-void unhandled exceptions.
+                }
+            }
             public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
         }
 
