@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.IO.Ports;
 using System.Threading;
@@ -23,8 +24,8 @@ namespace PrinterGUI.Services
             using SerialPort port = new SerialPort(portName, baudRate)
             {
                 NewLine = "\n",
-                ReadTimeout = 3000,
-                WriteTimeout = 3000,
+                ReadTimeout = 5000,
+                WriteTimeout = 15000,
                 DtrEnable = true,
                 RtsEnable = true
             };
@@ -39,76 +40,82 @@ namespace PrinterGUI.Services
                 throw;
             }
 
-            // drain initial messages
-            await Task.Delay(200).ConfigureAwait(false);
+            await Task.Delay(300, ct).ConfigureAwait(false);
+
             try
             {
                 while (port.BytesToRead > 0)
                 {
-                    string? s = port.ReadLine();
+                    var s = port.ReadLine();
                     statusProgress?.Report(s ?? string.Empty);
                 }
             }
-            catch { /* ignore */ }
+            catch { }
 
             for (int i = 0; i < total; i++)
             {
                 ct.ThrowIfCancellationRequested();
-                string line = lines[i].TrimEnd('\r', '\n');
-                if (string.IsNullOrWhiteSpace(line)) 
+
+                string line = lines[i].Trim();
+                if (string.IsNullOrWhiteSpace(line) || line.StartsWith(";"))
                 {
                     percentProgress?.Report((i * 100) / total);
                     continue;
                 }
 
-                try
+                port.WriteLine(line);
+                statusProgress?.Report($"> {line}");
+
+                // Dynamic ACK timeout: longer for dwell commands (G4 Sxxx)
+                int ackTimeoutMs = 15000;
+                if (line.StartsWith("G4", StringComparison.OrdinalIgnoreCase))
                 {
-                    port.WriteLine(line);
-                    statusProgress?.Report($"> {line}");
-                }
-                catch (Exception ex)
-                {
-                    statusProgress?.Report($"Write error: {ex.Message}");
-                    throw;
+                    var sIdx = line.IndexOf('S');
+                    if (sIdx >= 0 && int.TryParse(line[(sIdx + 1)..].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var secs) && secs > 0)
+                        ackTimeoutMs = (secs + 10) * 1000;
                 }
 
-                // Wait for an "ok" or short delay
                 bool okReceived = false;
                 var sw = System.Diagnostics.Stopwatch.StartNew();
-                while (sw.ElapsedMilliseconds < 4000)
+
+                while (sw.ElapsedMilliseconds < ackTimeoutMs)
                 {
                     ct.ThrowIfCancellationRequested();
+
                     try
                     {
                         if (port.BytesToRead > 0)
                         {
                             string resp = port.ReadLine();
                             statusProgress?.Report(resp);
-                            if (resp.ToLowerInvariant().Contains("ok") || resp.ToLowerInvariant().Contains("start"))
+
+                            var r = resp.ToLowerInvariant();
+                            if (r.Contains("ok") || r.Contains("start"))
                             {
                                 okReceived = true;
                                 break;
                             }
+
+                            // keep waiting on "busy" messages
+                            if (r.Contains("busy"))
+                                continue;
                         }
                     }
-                    catch (TimeoutException) { /* loop */ }
-                    catch (Exception ex) 
+                    catch (TimeoutException)
                     {
-                        statusProgress?.Report($"Serial read error: {ex.Message}");
-                        break;
+                        // keep polling
                     }
 
                     await Task.Delay(50, ct).ConfigureAwait(false);
                 }
 
-                // if not ok, proceed anyway (some firmwares are quiet) after a short pause
-                await Task.Delay(20, ct).ConfigureAwait(false);
+                if (!okReceived)
+                    throw new TimeoutException($"Timeout waiting for printer ACK after line {i + 1}: {line}");
 
                 percentProgress?.Report(((i + 1) * 100) / total);
             }
 
-            // finalization pause
-            await Task.Delay(300).ConfigureAwait(false);
+            await Task.Delay(300, ct).ConfigureAwait(false);
             try { port.Close(); } catch { }
         }
     }

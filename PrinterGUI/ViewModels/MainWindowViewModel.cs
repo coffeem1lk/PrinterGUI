@@ -89,6 +89,12 @@ namespace PrinterGUI.ViewModels
             Notify(nameof(CanSend));
             Notify(nameof(CanPrintCustomGcode));
             Notify(nameof(CanStop));
+
+            if (SendToPrinterCommand is RelayCommand sendCmd)
+                sendCmd.RaiseCanExecuteChanged();
+
+            if (StopPrintCommand is RelayCommand stopCmd)
+                stopCmd.RaiseCanExecuteChanged();
         }
 
         public ICommand SendToPrinterCommand { get; }
