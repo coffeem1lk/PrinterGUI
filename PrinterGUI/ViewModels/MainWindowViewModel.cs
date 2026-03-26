@@ -11,6 +11,7 @@ using PrinterGUI.Services;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text.Json;
 
 namespace PrinterGUI.ViewModels
 {
@@ -289,7 +290,41 @@ namespace PrinterGUI.ViewModels
                     }
 
                     var extrusionAmount = mlPerGummy * mmPerMl;
-                    var gummiesGcode = BuildGummiesGcode(extrusionAmount, waitSeconds, extrusionSpeedPercent);
+
+                    Dictionary<int, (double X, double Y)[]> blisterPointsMap;
+                    try
+                    {
+                        blisterPointsMap = await LoadGummiesPointsAsync(GummiesPointsJsonPath, _cts.Token).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Status = "Gummies points file error: " + ex.Message;
+                        IsSending = false;
+                        return;
+                    }
+
+                    var selectedBlisters = GetSelectedBlisters();
+                    if (selectedBlisters.Count == 0)
+                    {
+                        Status = "Select at least one blister";
+                        IsSending = false;
+                        return;
+                    }
+
+                    var points = new List<(double X, double Y)>();
+                    foreach (var blisterIndex in selectedBlisters)
+                    {
+                        if (!blisterPointsMap.TryGetValue(blisterIndex, out var blisterPoints))
+                        {
+                            Status = $"Blister {blisterIndex} is selected but not defined in JSON";
+                            IsSending = false;
+                            return;
+                        }
+
+                        points.AddRange(blisterPoints);
+                    }
+
+                    var gummiesGcode = BuildGummiesGcode(extrusionAmount, waitSeconds, extrusionSpeedPercent, points);
                     await File.WriteAllTextAsync(tempPath, gummiesGcode, _cts.Token).ConfigureAwait(false);
 
                     try
@@ -835,7 +870,11 @@ namespace PrinterGUI.ViewModels
             Tri((x1, y0, z0), (x1, y0, z1), (x1, y1, z1));
         }
 
-        private static string BuildGummiesGcode(double extrusionAmount, int waitSeconds, int extrusionSpeedPercent)
+        private static string BuildGummiesGcode(
+            double extrusionAmount,
+            int waitSeconds,
+            int extrusionSpeedPercent,
+            IReadOnlyList<(double X, double Y)> points)
         {
             var ci = CultureInfo.InvariantCulture;
             var sb = new System.Text.StringBuilder();
@@ -857,15 +896,7 @@ namespace PrinterGUI.ViewModels
             sb.AppendLine("; layer change");
             sb.AppendLine();
 
-            (double X, double Y)[] points =
-            {
-        (8.1, 79.825), (8.1, 101.825), (8.1, 123.825),
-        (28.767, 123.825), (28.767, 101.825), (28.767, 79.825),
-        (49.434, 79.825), (49.434, 101.825), (49.434, 123.825),
-        (70.101, 123.825), (70.101, 101.825), (70.101, 79.825)
-    };
-
-            for (int i = 0; i < points.Length; i++)
+            for (int i = 0; i < points.Count; i++)
             {
                 var p = points[i];
                 sb.AppendLine("G92 E0");
@@ -895,6 +926,60 @@ namespace PrinterGUI.ViewModels
         private const double OdfBedYMaxMm = 132.0; // if your Y max is really 261, set this to 261.0
         private const double OdfGapMm = 10.0;
         private const int OdfMaxFilms = 12;
+        private const string GummiesPointsJsonPath = "/home/raspberrypie/json/gummies_points.json";
+
+        private sealed class GummiesPointsConfig
+        {
+            public List<GummiesBlisterConfig>? Blisters { get; set; }
+        }
+
+        private sealed class GummiesBlisterConfig
+        {
+            public int Index { get; set; } // 1..6
+            public List<GummiesPoint>? Points { get; set; }
+        }
+
+        private sealed class GummiesPoint
+        {
+            public double X { get; set; }
+            public double Y { get; set; }
+        }
+
+        private static async Task<Dictionary<int, (double X, double Y)[]>> LoadGummiesPointsAsync(string jsonPath, CancellationToken ct)
+        {
+            if (!File.Exists(jsonPath))
+                throw new FileNotFoundException("Gummies points JSON not found", jsonPath);
+
+            var json = await File.ReadAllTextAsync(jsonPath, ct).ConfigureAwait(false);
+
+            var cfg = JsonSerializer.Deserialize<GummiesPointsConfig>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (cfg?.Blisters == null || cfg.Blisters.Count == 0)
+                throw new InvalidDataException("JSON must contain a non-empty 'blisters' array.");
+
+            var result = new Dictionary<int, (double X, double Y)[]>();
+
+            foreach (var b in cfg.Blisters)
+            {
+                if (b.Index < 1 || b.Index > 6)
+                    throw new InvalidDataException($"Blister index {b.Index} is invalid. Allowed values: 1..6.");
+
+                if (b.Points == null || b.Points.Count == 0)
+                    throw new InvalidDataException($"Blister {b.Index} has no points.");
+
+                var points = b.Points.Select(p => (p.X, p.Y)).ToArray();
+
+                if (points.Any(p => double.IsNaN(p.X) || double.IsNaN(p.Y) || double.IsInfinity(p.X) || double.IsInfinity(p.Y)))
+                    throw new InvalidDataException($"Blister {b.Index} contains invalid numeric values.");
+
+                result[b.Index] = points;
+            }
+
+            return result;
+        }
 
         async Task StopPrintAsync()
         {
@@ -905,6 +990,48 @@ namespace PrinterGUI.ViewModels
             try { _cts?.Cancel(); } catch { }
 
             await Task.CompletedTask;
+        }
+
+        // Blister presence (2x3 UI checkboxes)
+        // UI labels are remapped as:
+        // Blister1Present -> B6
+        // Blister2Present -> B4
+        // Blister3Present -> B2
+        // Blister4Present -> B5
+        // Blister5Present -> B3
+        // Blister6Present -> B1
+
+        // Default: B1 enabled (therefore Blister6Present = true)
+        bool _blister1Present = true;
+        public bool Blister1Present { get => _blister1Present; set { _blister1Present = value; Notify(nameof(Blister1Present)); } }
+
+        bool _blister2Present;
+        public bool Blister2Present { get => _blister2Present; set { _blister2Present = value; Notify(nameof(Blister2Present)); } }
+
+        bool _blister3Present;
+        public bool Blister3Present { get => _blister3Present; set { _blister3Present = value; Notify(nameof(Blister3Present)); } }
+
+        bool _blister4Present;
+        public bool Blister4Present { get => _blister4Present; set { _blister4Present = value; Notify(nameof(Blister4Present)); } }
+
+        bool _blister5Present;
+        public bool Blister5Present { get => _blister5Present; set { _blister5Present = value; Notify(nameof(Blister5Present)); } }
+
+        bool _blister6Present;
+        public bool Blister6Present { get => _blister6Present; set { _blister6Present = value; Notify(nameof(Blister6Present)); } }
+
+        private List<int> GetSelectedBlisters()
+        {
+            var selected = new List<int>(6);
+
+            if (Blister1Present) selected.Add(1);
+            if (Blister2Present) selected.Add(2);
+            if (Blister3Present) selected.Add(3);
+            if (Blister4Present) selected.Add(4);
+            if (Blister5Present) selected.Add(5);
+            if (Blister6Present) selected.Add(6);
+
+            return selected;
         }
     }
 }

@@ -142,6 +142,31 @@
               <TextBox x:Name="ExtrusionSpeedTextBox" Text="{Binding GummiesExtrusionSpeed}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
+
+            <!-- 6 blisters: 2 rows x 3 columns -->
+            <Grid Grid.Row="0" Grid.Column="1" Grid.RowSpan="4" Margin="12,0,0,0">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+              </Grid.RowDefinitions>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+
+              <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                         Text="Blisters present" FontWeight="Bold" Margin="0,0,0,6"/>
+
+              <CheckBox Grid.Row="1" Grid.Column="0" Content="B4" IsChecked="{Binding Blister4Present}" Margin="0,0,16,6"/>
+              <CheckBox Grid.Row="1" Grid.Column="1" Content="B5" IsChecked="{Binding Blister5Present}" Margin="0,0,16,6"/>
+              <CheckBox Grid.Row="1" Grid.Column="2" Content="B6" IsChecked="{Binding Blister6Present}" Margin="0,0,16,6"/>
+
+              <CheckBox Grid.Row="2" Grid.Column="0" Content="B3" IsChecked="{Binding Blister3Present}" Margin="0,0,16,0"/>
+              <CheckBox Grid.Row="2" Grid.Column="1" Content="B2" IsChecked="{Binding Blister2Present}" Margin="0,0,16,0"/>
+              <CheckBox Grid.Row="2" Grid.Column="2" Content="B1" IsChecked="{Binding Blister1Present}" Margin="0,0,16,0"/>
+            </Grid>
           </Grid>
 
           <!-- Global actions: 2 rows (inverted) -->
