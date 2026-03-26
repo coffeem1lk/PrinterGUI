@@ -300,7 +300,7 @@ namespace PrinterGUI.ViewModels
                     Dictionary<int, (double X, double Y)[]> blisterPointsMap;
                     try
                     {
-                        blisterPointsMap = await LoadGummiesPointsAsync(GummiesPointsJsonPath, _cts.Token).ConfigureAwait(false);
+                        blisterPointsMap = await LoadGummiesPointsAsync(GummiesPointsJsonPath, _cts.Token);
                     }
                     catch (Exception ex)
                     {
@@ -331,7 +331,7 @@ namespace PrinterGUI.ViewModels
                     }
 
                     var gummiesGcode = BuildGummiesGcode(extrusionAmount, waitSeconds, extrusionSpeedPercent, points);
-                    await File.WriteAllTextAsync(tempPath, gummiesGcode, _cts.Token).ConfigureAwait(false);
+                    await File.WriteAllTextAsync(tempPath, gummiesGcode, _cts.Token);
 
                     try
                     {
@@ -389,7 +389,7 @@ namespace PrinterGUI.ViewModels
                         extraArgs: null,
                         timeout: TimeSpan.FromMinutes(12),
                         outputProgress: slicerProgress,
-                        cancellationToken: _cts.Token).ConfigureAwait(false);
+                        cancellationToken: _cts.Token);
 
                     if (!resultPath.Success)
                     {
