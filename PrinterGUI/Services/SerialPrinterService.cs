@@ -66,13 +66,25 @@ namespace PrinterGUI.Services
                 port.WriteLine(line);
                 statusProgress?.Report($"> {line}");
 
-                // Dynamic ACK timeout: longer for dwell commands (G4 Sxxx)
+                // Dynamic ACK timeout
                 int ackTimeoutMs = 15000;
+
+                // long-running commands
+                if (line.StartsWith("G28", StringComparison.OrdinalIgnoreCase) ||   // homing
+                    line.StartsWith("G29", StringComparison.OrdinalIgnoreCase) ||   // bed leveling
+                    line.StartsWith("G30", StringComparison.OrdinalIgnoreCase) ||   // probing
+                    line.StartsWith("M109", StringComparison.OrdinalIgnoreCase) ||  // wait for hotend temp
+                    line.StartsWith("M190", StringComparison.OrdinalIgnoreCase))    // wait for bed temp
+                {
+                    ackTimeoutMs = 120000; // 120s
+                }
+
+                // dwell commands (G4 Sxxx)
                 if (line.StartsWith("G4", StringComparison.OrdinalIgnoreCase))
                 {
                     var sIdx = line.IndexOf('S');
                     if (sIdx >= 0 && int.TryParse(line[(sIdx + 1)..].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var secs) && secs > 0)
-                        ackTimeoutMs = (secs + 10) * 1000;
+                        ackTimeoutMs = Math.Max(ackTimeoutMs, (secs + 10) * 1000);
                 }
 
                 bool okReceived = false;
