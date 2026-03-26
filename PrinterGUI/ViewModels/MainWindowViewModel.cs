@@ -64,7 +64,7 @@ namespace PrinterGUI.ViewModels
         public string OdfFilmCount { get; set; } = "1";
 
         // NEW: Gummies-specific fields
-        public string GummiesMlPerGummy { get; set; } = "0.3";
+        public string GummiesMlPerGummy { get; set; } = "1";
         public string GummiesMmPerMl { get; set; } = "5";
         public string GummiesWaitBetweenSeconds { get; set; } = "5";
         public string GummiesExtrusionSpeed { get; set; } = "600";
@@ -887,7 +887,7 @@ namespace PrinterGUI.ViewModels
             sb.AppendLine();
             sb.AppendLine("; Filament gcode");
             sb.AppendLine();
-            sb.AppendLine($"M221 S45\t; velocità estrusione");
+            sb.AppendLine($"M221 S100\t; velocità estrusione");
             sb.AppendLine("G21 \t\t; set units to millimeters");
             sb.AppendLine("G90 \t\t; use absolute coordinates");
             sb.AppendLine("M82 \t\t; use absolute distances for extrusion");
