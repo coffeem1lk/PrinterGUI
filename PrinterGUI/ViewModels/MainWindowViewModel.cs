@@ -298,6 +298,11 @@ namespace PrinterGUI.ViewModels
                         }
                     }
 
+                    if (msg.StartsWith("> M155 S0", StringComparison.OrdinalIgnoreCase))
+                        _isOdfDryingPhase = false;
+                    else if (msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
+                        _isOdfDryingPhase = true;
+
                     if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
                         _isOdfDryingPhase = false;
                 }
@@ -498,6 +503,11 @@ namespace PrinterGUI.ViewModels
                             _lastOvenTempUpdateUtc = now;
                         }
                     }
+
+                    if (msg.StartsWith("> M155 S0", StringComparison.OrdinalIgnoreCase))
+                        _isOdfDryingPhase = false;
+                    else if (msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
+                        _isOdfDryingPhase = true;
 
                     if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
                         _isOdfDryingPhase = false;
@@ -993,8 +1003,6 @@ namespace PrinterGUI.ViewModels
             for (int i = 0; i < points.Count; i++)
             {
                 var p = points[i];
-                sb.AppendLine("G92 E0");
-                sb.AppendLine("G1 E-1 F1000");
                 sb.AppendLine($"G1 X{p.X.ToString("0.###", ci)} Y{p.Y.ToString("0.###", ci)} F4998.000\t; {i + 1}");
                 sb.AppendLine("G1 Z0 F800");
                 sb.AppendLine($"G1 E{extrusionAmount.ToString("0.###", ci)} F{extrusionSpeedPercent}");
@@ -1011,7 +1019,6 @@ namespace PrinterGUI.ViewModels
             sb.AppendLine("T1\t\t; select E1 (oven door)");
             sb.AppendLine("G92 E0");
             sb.AppendLine("G1 E17 F1000\t; close oven door");
-            sb.AppendLine("M107");
             sb.AppendLine("M84\t\t; disable motors");
 
             return sb.ToString();
