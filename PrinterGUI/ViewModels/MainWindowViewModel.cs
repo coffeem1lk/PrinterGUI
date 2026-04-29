@@ -61,6 +61,7 @@ namespace PrinterGUI.ViewModels
         }
 
         bool _isOdfDryingPhase;
+        bool _isGummiesDryingPhase;
         DateTime _lastOvenTempUpdateUtc = DateTime.MinValue;
 
         public string LayerHeight { get; set; } = "0.3";
@@ -306,8 +307,26 @@ namespace PrinterGUI.ViewModels
                     else if (msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
                         _isOdfDryingPhase = true;
 
+                    if (msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase))
+                        _isGummiesDryingPhase = false;
+                    else if (msg.StartsWith("> M141 S", StringComparison.OrdinalIgnoreCase))
+                        _isGummiesDryingPhase = true;
+
+                    if (_isGummiesDryingPhase && TryExtractOvenTemperatureC(msg, out var gummiesTempC))
+                    {
+                        var now = DateTime.UtcNow;
+                        if ((now - _lastOvenTempUpdateUtc).TotalMilliseconds >= 1000)
+                        {
+                            OvenTemperatureC = gummiesTempC.ToString("0.0", CultureInfo.InvariantCulture);
+                            _lastOvenTempUpdateUtc = now;
+                        }
+                    }
+
                     if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
+                    {
                         _isOdfDryingPhase = false;
+                        _isGummiesDryingPhase = false;
+                    }
                 }
 
                 if (!msg.StartsWith("G") && !msg.StartsWith("M") && !msg.StartsWith(">") && !msg.StartsWith(";"))
@@ -533,8 +552,26 @@ namespace PrinterGUI.ViewModels
                     else if (msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
                         _isOdfDryingPhase = true;
 
+                    if (msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase))
+                        _isGummiesDryingPhase = false;
+                    else if (msg.StartsWith("> M141 S", StringComparison.OrdinalIgnoreCase))
+                        _isGummiesDryingPhase = true;
+
+                    if (_isGummiesDryingPhase && TryExtractOvenTemperatureC(msg, out var gummiesTempC))
+                    {
+                        var now = DateTime.UtcNow;
+                        if ((now - _lastOvenTempUpdateUtc).TotalMilliseconds >= 1000)
+                        {
+                            OvenTemperatureC = gummiesTempC.ToString("0.0", CultureInfo.InvariantCulture);
+                            _lastOvenTempUpdateUtc = now;
+                        }
+                    }
+
                     if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
+                    {
                         _isOdfDryingPhase = false;
+                        _isGummiesDryingPhase = false;
+                    }
                 }
 
                 if (!msg.StartsWith("G") && !msg.StartsWith("M") && !msg.StartsWith(">") && !msg.StartsWith(";"))
