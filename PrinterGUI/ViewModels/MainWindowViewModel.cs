@@ -280,12 +280,20 @@ namespace PrinterGUI.ViewModels
                 _lastOvenTempUpdateUtc = DateTime.MinValue;
                 OvenTemperatureC = "--";
             }
+            else if (IsGummies)
+            {
+                _isGummiesDryingPhase = false;
+                _lastOvenTempUpdateUtc = DateTime.MinValue;
+                OvenTemperatureC = "--";
+            }
+
             var slicerProgress = new Progress<string>(s =>
             {
                 var msg = s?.Trim() ?? string.Empty;
 
                 if (isOdfJob)
                 {
+                    // ODF temperature tracking...
                     if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase) ||
                         msg.StartsWith("> G4 ", StringComparison.OrdinalIgnoreCase))
                     {
@@ -307,10 +315,17 @@ namespace PrinterGUI.ViewModels
                     else if (msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
                         _isOdfDryingPhase = true;
 
-                    if (msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase))
-                        _isGummiesDryingPhase = false;
-                    else if (msg.StartsWith("> M141 S", StringComparison.OrdinalIgnoreCase))
+                    if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isOdfDryingPhase = false;
+                    }
+                }
+                else if (!isOdfJob && IsGummies)
+                {
+                    if (msg.StartsWith("> M141 S", StringComparison.OrdinalIgnoreCase))
+                    {
                         _isGummiesDryingPhase = true;
+                    }
 
                     if (_isGummiesDryingPhase && TryExtractOvenTemperatureC(msg, out var gummiesTempC))
                     {
@@ -322,9 +337,13 @@ namespace PrinterGUI.ViewModels
                         }
                     }
 
+                    if (msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isGummiesDryingPhase = false;
+                    }
+
                     if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
                     {
-                        _isOdfDryingPhase = false;
                         _isGummiesDryingPhase = false;
                     }
                 }
@@ -531,6 +550,7 @@ namespace PrinterGUI.ViewModels
 
                 if (isOdfJob)
                 {
+                    // ODF temperature tracking...
                     if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase) ||
                         msg.StartsWith("> G4 ", StringComparison.OrdinalIgnoreCase))
                     {
@@ -552,10 +572,17 @@ namespace PrinterGUI.ViewModels
                     else if (msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
                         _isOdfDryingPhase = true;
 
-                    if (msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase))
-                        _isGummiesDryingPhase = false;
-                    else if (msg.StartsWith("> M141 S", StringComparison.OrdinalIgnoreCase))
+                    if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isOdfDryingPhase = false;
+                    }
+                }
+                else if (!isOdfJob && IsGummies)
+                {
+                    if (msg.StartsWith("> M141 S", StringComparison.OrdinalIgnoreCase))
+                    {
                         _isGummiesDryingPhase = true;
+                    }
 
                     if (_isGummiesDryingPhase && TryExtractOvenTemperatureC(msg, out var gummiesTempC))
                     {
@@ -567,9 +594,13 @@ namespace PrinterGUI.ViewModels
                         }
                     }
 
+                    if (msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isGummiesDryingPhase = false;
+                    }
+
                     if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
                     {
-                        _isOdfDryingPhase = false;
                         _isGummiesDryingPhase = false;
                     }
                 }
