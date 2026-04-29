@@ -136,6 +136,11 @@
               <TextBlock Text="Drying Temp (&#176;C)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="GummiesDryingTempTextBox" Text="{Binding GummiesDryingTemp}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+
+              <!-- NEW: live oven temp -->
+              <TextBlock Text="  Actual:" VerticalAlignment="Center" Margin="10,0,4,0"/>
+              <TextBlock Text="{Binding OvenTemperatureC}" VerticalAlignment="Center" FontWeight="Bold"/>
+              <TextBlock Text=" &#176;C" VerticalAlignment="Center"/>
             </StackPanel>
 
             <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
