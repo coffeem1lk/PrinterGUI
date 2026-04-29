@@ -1033,10 +1033,14 @@ namespace PrinterGUI.ViewModels
             sb.AppendLine("; layer change");
             sb.AppendLine();
 
+            // Determine if we need to adjust Y coordinates
+            bool adjustY = Math.Abs(gummiesMmPerMl - 1.636) < 0.001;
+
             for (int i = 0; i < points.Count; i++)
             {
                 var p = points[i];
-                sb.AppendLine($"G1 X{p.X.ToString("0.###", ci)} Y{p.Y.ToString("0.###", ci)} F4998.000\t; {i + 1}");
+                double adjustedY = adjustY ? p.Y - 12 : p.Y;
+                sb.AppendLine($"G1 X{p.X.ToString("0.###", ci)} Y{adjustedY.ToString("0.###", ci)} F4998.000\t; {i + 1}");
                 sb.AppendLine("G1 Z0 F800");
                 sb.AppendLine($"G1 E{extrusionAmount.ToString("0.###", ci)} F{extrusionSpeedPercent}");
                 sb.AppendLine("G92 E0");
