@@ -122,6 +122,8 @@
               <RowDefinition Height="Auto"/>
               <RowDefinition Height="Auto"/>
               <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
@@ -130,26 +132,46 @@
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
-            <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
-              <TextBlock Text="mm/ml" Width="132" VerticalAlignment="Center"/>
-              <TextBox x:Name="MmPerMlTextBox" Text="{Binding GummiesMmPerMl}" Width="60"
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
+              <TextBlock Text="Drying Temp (&#176;C)" Width="132" VerticalAlignment="Center"/>
+              <TextBox x:Name="GummiesDryingTempTextBox" Text="{Binding GummiesDryingTemp}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
-            <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
+            <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
               <TextBlock Text="wait between gummies (s)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="WaitBetweenGummiesTextBox" Text="{Binding GummiesWaitBetweenSeconds}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
-            <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
+            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
+              <TextBlock Text="Drying Time (min)" Width="132" VerticalAlignment="Center"/>
+              <TextBox x:Name="GummiesDryingTimeTextBox" Text="{Binding GummiesDryingTime}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
               <TextBlock Text="extrusion speed (mm/min)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="ExtrusionSpeedTextBox" Text="{Binding GummiesExtrusionSpeed}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
+              <TextBlock Text="Drying Time RT (min)" Width="132" VerticalAlignment="Center"/>
+              <TextBox x:Name="GummiesDryingTimeRTTextBox" Text="{Binding GummiesDryingTimeRT}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="4" Grid.Column="0" Orientation="Vertical" Margin="0,0,8,6">
+              <TextBlock Text="mm/ml" VerticalAlignment="Center" Margin="0,0,0,4"/>
+              <StackPanel Orientation="Horizontal">
+                <RadioButton Content="5" IsChecked="{Binding GummiesMmPerMlIs5}" Margin="0,0,12,0"/>
+                <RadioButton Content="1.636" IsChecked="{Binding GummiesMmPerMlIs1636}"/>
+              </StackPanel>
+            </StackPanel>
+
             <!-- 6 blisters: 2 rows x 3 columns -->
-            <Grid Grid.Row="0" Grid.Column="1" Grid.RowSpan="4" Margin="12,0,0,0">
+            <Grid Grid.Row="3" Grid.Column="1" Grid.RowSpan="3" Margin="-88,0,0,0">
               <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>

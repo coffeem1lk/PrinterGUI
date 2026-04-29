@@ -80,6 +80,9 @@ namespace PrinterGUI.ViewModels
         public string GummiesMmPerMl { get; set; } = "5";
         public string GummiesWaitBetweenSeconds { get; set; } = "5";
         public string GummiesExtrusionSpeed { get; set; } = "600";
+        public string GummiesDryingTemp { get; set; } = "0";
+        public string GummiesDryingTime { get; set; } = "0";
+        public string GummiesDryingTimeRT { get; set; } = "0";
 
         public string PrusaSlicerPath { get; set; } = "prusa-slicer";
 
@@ -343,6 +346,27 @@ namespace PrinterGUI.ViewModels
                         return;
                     }
 
+                    if (!int.TryParse(GummiesDryingTemp, NumberStyles.Integer, CultureInfo.InvariantCulture, out var gummiesDryingTemp) || gummiesDryingTemp < 0)
+                    {
+                        Status = "Invalid drying temperature";
+                        IsSending = false;
+                        return;
+                    }
+
+                    if (!int.TryParse(GummiesDryingTime, NumberStyles.Integer, CultureInfo.InvariantCulture, out var gummiesDryingTime) || gummiesDryingTime < 0)
+                    {
+                        Status = "Invalid drying time";
+                        IsSending = false;
+                        return;
+                    }
+
+                    if (!int.TryParse(GummiesDryingTimeRT, NumberStyles.Integer, CultureInfo.InvariantCulture, out var gummiesDryingTimeRT) || gummiesDryingTimeRT < 0)
+                    {
+                        Status = "Invalid drying time RT";
+                        IsSending = false;
+                        return;
+                    }
+
                     var extrusionAmount = mlPerGummy * mmPerMl;
 
                     Dictionary<int, (double X, double Y)[]> blisterPointsMap;
@@ -378,7 +402,7 @@ namespace PrinterGUI.ViewModels
                         points.AddRange(blisterPoints);
                     }
 
-                    var gummiesGcode = BuildGummiesGcode(extrusionAmount, waitSeconds, extrusionSpeedPercent, points);
+                    var gummiesGcode = BuildGummiesGcode(extrusionAmount, waitSeconds, extrusionSpeedPercent, gummiesDryingTemp, gummiesDryingTime, gummiesDryingTimeRT, double.Parse(GummiesMmPerMl, CultureInfo.InvariantCulture), points);
                     await File.WriteAllTextAsync(tempPath, gummiesGcode, _cts.Token);
 
                     try
@@ -978,10 +1002,19 @@ namespace PrinterGUI.ViewModels
             double extrusionAmount,
             int waitSeconds,
             int extrusionSpeedPercent,
+            int dryingTemp,
+            int dryingTimeMinutes,
+            int dryingTimeRTMinutes,
+            double gummiesMmPerMl,
             IReadOnlyList<(double X, double Y)> points)
         {
             var ci = CultureInfo.InvariantCulture;
             var sb = new System.Text.StringBuilder();
+
+            // Set probe offset based on mm/ml selection
+            string m851Command = Math.Abs(gummiesMmPerMl - 5.0) < 0.001 ? "M851 Y-28" : "M851 Y-36";
+            sb.AppendLine(m851Command);
+            sb.AppendLine();
 
             sb.AppendLine("T1\t\t; select E1 (oven door)");
             sb.AppendLine("G92 E0");
@@ -1015,11 +1048,26 @@ namespace PrinterGUI.ViewModels
             sb.AppendLine();
             sb.AppendLine("; final steps");
             sb.AppendLine();
-            sb.AppendLine("G28 X0 Y0");
-            sb.AppendLine("T1\t\t; select E1 (oven door)");
+            
+            // START DRYING
+            sb.AppendLine("; START DRYING");
+            sb.AppendLine("T1 ; select oven door");
+            sb.AppendLine("G1 Z10 F1000 ; raise Z");
+            sb.AppendLine("G28 X0 ; home X");
+            sb.AppendLine("G1 Y330 F4000 ; insert plate in oven");
             sb.AppendLine("G92 E0");
-            sb.AppendLine("G1 E17 F1000\t; close oven door");
-            sb.AppendLine("M84\t\t; disable motors");
+            sb.AppendLine("G1 E17 F800 ; close oven door");
+            sb.AppendLine("M84 ; disable motors");
+            sb.AppendLine("M106 S255 ; activate fan");
+            sb.AppendLine($"M141 S{dryingTemp} ; set chamber temp (°C) / does NOT wait until reached");
+            sb.AppendLine($"G4 S{dryingTimeMinutes * 60} ; set drying time (s) (e.g., 1500 s = 25 min)");
+            sb.AppendLine("M141 S0 ; stop heating");
+            sb.AppendLine("M17 Y E ; enable motors Y E1");
+            sb.AppendLine("G92 E0");
+            sb.AppendLine("G1 E-17 F800 ; open oven door");
+            sb.AppendLine($"G4 S{dryingTimeRTMinutes * 60} ; wait in oven with ventilation, no heating");
+            sb.AppendLine("G28 Y0 ; home Y");
+            sb.AppendLine("G1 E0");
 
             return sb.ToString();
         }
@@ -1164,6 +1212,30 @@ namespace PrinterGUI.ViewModels
 
             tempC = 0;
             return false;
+        }
+
+        bool _gummiesMmPerMlIs5 = true;
+        public bool GummiesMmPerMlIs5
+        {
+            get => _gummiesMmPerMlIs5;
+            set 
+            { 
+                _gummiesMmPerMlIs5 = value; 
+                Notify(nameof(GummiesMmPerMlIs5));
+                if (value) GummiesMmPerMl = "5";
+            }
+        }
+
+        bool _gummiesMmPerMlIs1636 = false;
+        public bool GummiesMmPerMlIs1636
+        {
+            get => _gummiesMmPerMlIs1636;
+            set 
+            { 
+                _gummiesMmPerMlIs1636 = value; 
+                Notify(nameof(GummiesMmPerMlIs1636));
+                if (value) GummiesMmPerMl = "1.636";
+            }
         }
     }
 }
