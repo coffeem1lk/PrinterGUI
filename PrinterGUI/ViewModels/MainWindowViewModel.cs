@@ -60,8 +60,7 @@ namespace PrinterGUI.ViewModels
             set { _ovenTemperatureC = value; Notify(nameof(OvenTemperatureC)); }
         }
 
-        bool _isOdfDryingPhase;
-        bool _isGummiesDryingPhase;
+        bool _isDryingPhase;
         DateTime _lastOvenTempUpdateUtc = DateTime.MinValue;
 
         public string LayerHeight { get; set; } = "0.3";
@@ -274,15 +273,10 @@ namespace PrinterGUI.ViewModels
             Progress = 0;
             Status = IsGummies ? "Generating Gummies G-code..." : "Slicing (PrusaSlicer) before send...";
 
-            if (IsOdf)
+            // when starting a job, reset for BOTH ODF and Gummies:
+            if (IsOdf || IsGummies)
             {
-                _isOdfDryingPhase = false;
-                _lastOvenTempUpdateUtc = DateTime.MinValue;
-                OvenTemperatureC = "--";
-            }
-            else if (IsGummies)
-            {
-                _isGummiesDryingPhase = false;
+                _isDryingPhase = false;
                 _lastOvenTempUpdateUtc = DateTime.MinValue;
                 OvenTemperatureC = "--";
             }
@@ -291,61 +285,9 @@ namespace PrinterGUI.ViewModels
             {
                 var msg = s?.Trim() ?? string.Empty;
 
-                if (isOdfJob)
+                if (IsOdf || IsGummies)
                 {
-                    // ODF temperature tracking...
-                    if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase) ||
-                        msg.StartsWith("> G4 ", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isOdfDryingPhase = true;
-                    }
-
-                    if (_isOdfDryingPhase && TryExtractOvenTemperatureC(msg, out var tempC))
-                    {
-                        var now = DateTime.UtcNow;
-                        if ((now - _lastOvenTempUpdateUtc).TotalMilliseconds >= 1000)
-                        {
-                            OvenTemperatureC = tempC.ToString("0.0", CultureInfo.InvariantCulture);
-                            _lastOvenTempUpdateUtc = now;
-                        }
-                    }
-
-                    if (msg.StartsWith("> M155 S0", StringComparison.OrdinalIgnoreCase))
-                        _isOdfDryingPhase = false;
-                    else if (msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
-                        _isOdfDryingPhase = true;
-
-                    if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isOdfDryingPhase = false;
-                    }
-                }
-                else if (!isOdfJob && IsGummies)
-                {
-                    if (msg.StartsWith("> M141 S", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isGummiesDryingPhase = true;
-                    }
-
-                    if (_isGummiesDryingPhase && TryExtractOvenTemperatureC(msg, out var gummiesTempC))
-                    {
-                        var now = DateTime.UtcNow;
-                        if ((now - _lastOvenTempUpdateUtc).TotalMilliseconds >= 1000)
-                        {
-                            OvenTemperatureC = gummiesTempC.ToString("0.0", CultureInfo.InvariantCulture);
-                            _lastOvenTempUpdateUtc = now;
-                        }
-                    }
-
-                    if (msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isGummiesDryingPhase = false;
-                    }
-
-                    if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isGummiesDryingPhase = false;
-                    }
+                    HandleDryingTemperatureMessage(msg);
                 }
 
                 if (!msg.StartsWith("G") && !msg.StartsWith("M") && !msg.StartsWith(">") && !msg.StartsWith(";"))
@@ -548,61 +490,9 @@ namespace PrinterGUI.ViewModels
             {
                 var msg = s?.Trim() ?? string.Empty;
 
-                if (isOdfJob)
+                if (IsOdf || IsGummies)
                 {
-                    // ODF temperature tracking...
-                    if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase) ||
-                        msg.StartsWith("> G4 ", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isOdfDryingPhase = true;
-                    }
-
-                    if (_isOdfDryingPhase && TryExtractOvenTemperatureC(msg, out var tempC))
-                    {
-                        var now = DateTime.UtcNow;
-                        if ((now - _lastOvenTempUpdateUtc).TotalMilliseconds >= 1000)
-                        {
-                            OvenTemperatureC = tempC.ToString("0.0", CultureInfo.InvariantCulture);
-                            _lastOvenTempUpdateUtc = now;
-                        }
-                    }
-
-                    if (msg.StartsWith("> M155 S0", StringComparison.OrdinalIgnoreCase))
-                        _isOdfDryingPhase = false;
-                    else if (msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
-                        _isOdfDryingPhase = true;
-
-                    if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isOdfDryingPhase = false;
-                    }
-                }
-                else if (!isOdfJob && IsGummies)
-                {
-                    if (msg.StartsWith("> M141 S", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isGummiesDryingPhase = true;
-                    }
-
-                    if (_isGummiesDryingPhase && TryExtractOvenTemperatureC(msg, out var gummiesTempC))
-                    {
-                        var now = DateTime.UtcNow;
-                        if ((now - _lastOvenTempUpdateUtc).TotalMilliseconds >= 1000)
-                        {
-                            OvenTemperatureC = gummiesTempC.ToString("0.0", CultureInfo.InvariantCulture);
-                            _lastOvenTempUpdateUtc = now;
-                        }
-                    }
-
-                    if (msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isGummiesDryingPhase = false;
-                    }
-
-                    if (msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isGummiesDryingPhase = false;
-                    }
+                    HandleDryingTemperatureMessage(msg);
                 }
 
                 if (!msg.StartsWith("G") && !msg.StartsWith("M") && !msg.StartsWith(">") && !msg.StartsWith(";"))
@@ -647,7 +537,7 @@ namespace PrinterGUI.ViewModels
                 }
                 if (isOdfJob)
                 {
-                    _isOdfDryingPhase = false;
+                    _isDryingPhase = false;
                     _lastOvenTempUpdateUtc = DateTime.MinValue;
                     OvenTemperatureC = "--";
                 }
@@ -1197,7 +1087,7 @@ namespace PrinterGUI.ViewModels
                 if (points.Any(p => double.IsNaN(p.X) || double.IsNaN(p.Y) || double.IsInfinity(p.X) || double.IsInfinity(p.Y)))
                     throw new InvalidDataException($"Blister {b.Index} contains invalid numeric values.");
 
-                result[b.Index] = points;
+                result[b.Index] = points; // array -> array
             }
 
             return result;
@@ -1307,6 +1197,36 @@ namespace PrinterGUI.ViewModels
                 _gummiesMmPerMlIs1636 = value; 
                 Notify(nameof(GummiesMmPerMlIs1636));
                 if (value) GummiesMmPerMl = "1.636";
+            }
+        }
+
+        private void HandleDryingTemperatureMessage(string msg)
+        {
+            if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase) ||
+                msg.StartsWith("> G4 ", StringComparison.OrdinalIgnoreCase))
+            {
+                _isDryingPhase = true;
+            }
+
+            if (_isDryingPhase && TryExtractOvenTemperatureC(msg, out var tempC))
+            {
+                var now = DateTime.UtcNow;
+                if ((now - _lastOvenTempUpdateUtc).TotalMilliseconds >= 1000)
+                {
+                    OvenTemperatureC = tempC.ToString("0.0", CultureInfo.InvariantCulture);
+                    _lastOvenTempUpdateUtc = now;
+                }
+            }
+
+            if (msg.StartsWith("> M155 S0", StringComparison.OrdinalIgnoreCase) ||
+                msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase) ||
+                msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
+            {
+                _isDryingPhase = false;
+            }
+            else if (msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
+            {
+                _isDryingPhase = true;
             }
         }
     }
