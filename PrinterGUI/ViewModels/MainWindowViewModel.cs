@@ -1010,28 +1010,33 @@ namespace PrinterGUI.ViewModels
             sb.AppendLine();
             sb.AppendLine("; final steps");
             sb.AppendLine();
-            
-            // START DRYING
-            sb.AppendLine("; START DRYING");
-            sb.AppendLine("T1 ; select oven door");
-            sb.AppendLine("G1 Z10 F1000 ; raise Z");
-            sb.AppendLine("G28 X0 ; home X");
-            sb.AppendLine("G1 Y330 F4000 ; insert plate in oven");
-            sb.AppendLine("G92 E0");
-            sb.AppendLine("G1 E17 F800 ; close oven door");
-            sb.AppendLine("M84 ; disable motors");
-            sb.AppendLine("M106 S255 ; activate fan");
-            sb.AppendLine("M155 S2 ; start temperature auto-report every 2s");
-            sb.AppendLine($"M141 S{dryingTemp} ; set chamber temp (°C) / does NOT wait until reached");
-            sb.AppendLine($"G4 S{dryingTimeMinutes * 60} ; set drying time (s)");
-            sb.AppendLine("M141 S0 ; stop heating");
-            sb.AppendLine("M155 S0 ; stop temperature auto-report");
-            sb.AppendLine("M17 Y E ; enable motors Y E1");
-            sb.AppendLine("G92 E0");
-            sb.AppendLine("G1 E-17 F800 ; open oven door");
-            sb.AppendLine($"G4 S{dryingTimeRTMinutes * 60} ; wait in oven with ventilation, no heating");
-            sb.AppendLine("G28 Y0 ; home Y");
-            sb.AppendLine("G1 E0");
+
+            bool includeDryingStage = dryingTimeMinutes > 0 || dryingTimeRTMinutes > 0;
+
+            if (includeDryingStage)
+            {
+                // START DRYING
+                sb.AppendLine("; START DRYING");
+                sb.AppendLine("T1 ; select oven door");
+                sb.AppendLine("G1 Z10 F1000 ; raise Z");
+                sb.AppendLine("G28 X0 ; home X");
+                sb.AppendLine("G1 Y330 F4000 ; insert plate in oven");
+                sb.AppendLine("G92 E0");
+                sb.AppendLine("G1 E17 F800 ; close oven door");
+                sb.AppendLine("M84 ; disable motors");
+                sb.AppendLine("M106 S255 ; activate fan");
+                sb.AppendLine("M155 S2 ; start temperature auto-report every 2s");
+                sb.AppendLine($"M141 S{dryingTemp} ; set chamber temp (°C) / does NOT wait until reached");
+                sb.AppendLine($"G4 S{dryingTimeMinutes * 60} ; set drying time (s)");
+                sb.AppendLine("M141 S0 ; stop heating");
+                sb.AppendLine("M155 S0 ; stop temperature auto-report");
+                sb.AppendLine("M17 Y E ; enable motors Y E1");
+                sb.AppendLine("G92 E0");
+                sb.AppendLine("G1 E-17 F800 ; open oven door");
+                sb.AppendLine($"G4 S{dryingTimeRTMinutes * 60} ; wait in oven with ventilation, no heating");
+                sb.AppendLine("G28 Y0 ; home Y");
+                sb.AppendLine("G1 E0");
+            }
 
             return sb.ToString();
         }
