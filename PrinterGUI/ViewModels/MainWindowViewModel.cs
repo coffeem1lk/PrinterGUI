@@ -1038,6 +1038,12 @@ namespace PrinterGUI.ViewModels
                 sb.AppendLine("G1 E0");
             }
 
+            sb.AppendLine("T1 ; select oven door");
+            sb.AppendLine("G92 E0");
+            sb.AppendLine("G1 E17 F800 ; close oven door");
+            sb.AppendLine("G28 X0 Y0");
+            sb.AppendLine("M84 ; disable motors");
+
             return sb.ToString();
         }
 
