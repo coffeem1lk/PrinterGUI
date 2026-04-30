@@ -1021,9 +1021,11 @@ namespace PrinterGUI.ViewModels
             sb.AppendLine("G1 E17 F800 ; close oven door");
             sb.AppendLine("M84 ; disable motors");
             sb.AppendLine("M106 S255 ; activate fan");
+            sb.AppendLine("M155 S2 ; start temperature auto-report every 2s");
             sb.AppendLine($"M141 S{dryingTemp} ; set chamber temp (°C) / does NOT wait until reached");
-            sb.AppendLine($"G4 S{dryingTimeMinutes * 60} ; set drying time (s) (e.g., 1500 s = 25 min)");
+            sb.AppendLine($"G4 S{dryingTimeMinutes * 60} ; set drying time (s)");
             sb.AppendLine("M141 S0 ; stop heating");
+            sb.AppendLine("M155 S0 ; stop temperature auto-report");
             sb.AppendLine("M17 Y E ; enable motors Y E1");
             sb.AppendLine("G92 E0");
             sb.AppendLine("G1 E-17 F800 ; open oven door");
