@@ -32,6 +32,12 @@ namespace PrinterGUI.Views
             {
                 CustomGcodeTextBox.AddHandler(PointerPressedEvent, TextBox_PointerPressed, RoutingStrategies.Bubble);
             }
+
+            var tempTextBox = this.FindControl<TextBox>("ExtruderTempTextBox");
+            if (tempTextBox != null)
+            {
+                tempTextBox.AddHandler(PointerPressedEvent, TextBox_PointerPressed, RoutingStrategies.Bubble);
+            }
         }
 
         private bool IsPointerInsideGcodeKeyboard(object? source)

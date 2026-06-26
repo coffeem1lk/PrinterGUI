@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Ports;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -20,7 +21,13 @@ namespace PrinterGUI.ViewModels
         string _customGcode = string.Empty;
         public string CustomGcode { get => _customGcode; set { _customGcode = value; Notify(nameof(CustomGcode)); } }
 
-        // Add a new property for the response
+        string _extruderTempControl = "0";
+        public string ExtruderTempControl
+        {
+            get => _extruderTempControl;
+            set { _extruderTempControl = value; Notify(nameof(ExtruderTempControl)); }
+        }
+
         string _response = string.Empty;
         public string Response { get => _response; set { _response = value; Notify(nameof(Response)); } }
 
@@ -32,6 +39,8 @@ namespace PrinterGUI.ViewModels
         public ICommand HomeAllCommand { get; }
         public ICommand DisableMotorsCommand { get; }
         public ICommand SendCustomGcodeCommand { get; }
+        public ICommand StartTempControlCommand { get; }
+        public ICommand StopTempControlCommand { get; }
 
         public AxisControlViewModel(string serialPort = "/dev/ttyACM0")
         {
@@ -45,6 +54,25 @@ namespace PrinterGUI.ViewModels
             HomeAllCommand = new RelayCommand(async _ => await SendGcodeAsync("G28"));
             DisableMotorsCommand = new RelayCommand(async _ => await SendGcodeAsync("M84"));
             SendCustomGcodeCommand = new RelayCommand(async _ => await SendCustomGcodeAsync());
+
+            StartTempControlCommand = new RelayCommand(async _ => await StartTempControlAsync());
+            StopTempControlCommand = new RelayCommand(async _ => await StopTempControlAsync());
+        }
+
+        async Task StartTempControlAsync()
+        {
+            if (!int.TryParse(ExtruderTempControl, NumberStyles.Integer, CultureInfo.InvariantCulture, out var temp) || temp < 0)
+            {
+                Status = "Invalid extruder temp";
+                return;
+            }
+
+            await SendGcodeAsync($"M104 S{temp}");
+        }
+
+        async Task StopTempControlAsync()
+        {
+            await SendGcodeAsync("M104 S0");
         }
 
         async Task MoveAxisAsync(string axis, object? distanceObj)
@@ -55,15 +83,13 @@ namespace PrinterGUI.ViewModels
                 return;
             }
 
-            // Use appropriate feedrates for each axis
             var feedrate = axis switch
             {
-                "X" or "Y" => "F3000", // 3000 mm/min for XY (50 mm/s)
-                "Z" => "F400",          // 400 mm/min for Z (~6.7 mm/s)
+                "X" or "Y" => "F3000",
+                "Z" => "F400",
                 _ => "F3000"
             };
 
-            // Use G1 (controlled move) with explicit feedrate
             var gcode = $"G91\nG1 {axis}{distance:F2} {feedrate}\nG90";
             await SendGcodeAsync(gcode);
         }
@@ -76,7 +102,6 @@ namespace PrinterGUI.ViewModels
                 return;
             }
 
-            // Select tool, move E with F400 feedrate, then reset to normal speed
             var toolCmd = extruderIndex == 0 ? "T0" : "T1";
             var gcode = $"{toolCmd}\nG91\nG1 E{distance:F2} F400\nG1 F3000\nG90";
             await SendGcodeAsync(gcode);
@@ -92,58 +117,54 @@ namespace PrinterGUI.ViewModels
 
             var command = CustomGcode.Trim();
             await SendGcodeAsync(command);
-            // Clear the input after sending
             CustomGcode = string.Empty;
         }
 
         async Task SendGcodeAsync(string gcode)
         {
             Status = $"Sending: {gcode.Replace("\n", " | ")}";
-            Response = string.Empty; // Clear previous response
-            
+            Response = string.Empty;
+
             try
             {
                 using var port = new SerialPort(_serialPort, 115200)
                 {
                     NewLine = "\n",
-                    ReadTimeout = 1000, // Increased from 2000 for individual line reads
+                    ReadTimeout = 1000,
                     WriteTimeout = 2000,
                     DtrEnable = true,
                     RtsEnable = true
                 };
 
                 port.Open();
-                await Task.Delay(200); // allow init
+                await Task.Delay(200);
 
                 foreach (var line in gcode.Split('\n'))
                 {
                     if (string.IsNullOrWhiteSpace(line)) continue;
                     port.WriteLine(line.Trim());
-                    await Task.Delay(50); // Reduced delay between commands
+                    await Task.Delay(50);
                 }
 
-                // Read response lines until we get "ok" or timeout
                 var responseBuilder = new System.Text.StringBuilder();
                 var startTime = DateTime.Now;
-                var maxWaitTime = TimeSpan.FromSeconds(5); // Max 5 seconds to read response
+                var maxWaitTime = TimeSpan.FromSeconds(5);
                 bool gotOk = false;
 
                 while ((DateTime.Now - startTime) < maxWaitTime)
                 {
                     try
                     {
-                        // Check if data is available
                         if (port.BytesToRead > 0)
                         {
                             var resp = port.ReadLine().Trim();
                             Debug.WriteLine(resp);
-                            
+
                             if (!string.IsNullOrEmpty(resp))
                             {
                                 responseBuilder.AppendLine(resp);
-                                
-                                // Check if we got the "ok" response (Marlin sends this after completing commands)
-                                if (resp.Equals("ok", StringComparison.OrdinalIgnoreCase) || 
+
+                                if (resp.Equals("ok", StringComparison.OrdinalIgnoreCase) ||
                                     resp.StartsWith("ok", StringComparison.OrdinalIgnoreCase))
                                 {
                                     gotOk = true;
@@ -153,23 +174,21 @@ namespace PrinterGUI.ViewModels
                         }
                         else
                         {
-                            // No data available, wait a bit before checking again
                             await Task.Delay(50);
                         }
                     }
                     catch (TimeoutException)
                     {
-                        // ReadLine timed out, but continue checking if we have time left
                         await Task.Delay(50);
                     }
                 }
 
                 port.Close();
-                
-                Response = responseBuilder.Length > 0 
-                    ? responseBuilder.ToString().Trim() 
+
+                Response = responseBuilder.Length > 0
+                    ? responseBuilder.ToString().Trim()
                     : "(no response - check serial port connection)";
-                
+
                 Status = gotOk ? "Command completed successfully" : "Command sent (no 'ok' received)";
             }
             catch (Exception ex)

@@ -80,6 +80,7 @@ namespace PrinterGUI.ViewModels
         public string GummiesMmPerMl { get; set; } = "5";
         public string GummiesWaitBetweenSeconds { get; set; } = "5";
         public string GummiesExtrusionSpeed { get; set; } = "600";
+        public string GummiesExtrusionTemp { get; set; } = "0";
         public string GummiesDryingTemp { get; set; } = "0";
         public string GummiesDryingTime { get; set; } = "0";
         public string GummiesDryingTimeRT { get; set; } = "0";
@@ -326,6 +327,13 @@ namespace PrinterGUI.ViewModels
                         return;
                     }
 
+                    if (!int.TryParse(GummiesExtrusionTemp, NumberStyles.Integer, CultureInfo.InvariantCulture, out var gummiesExtrusionTemp) || gummiesExtrusionTemp < 0)
+                    {
+                        Status = "Invalid extrusion temp";
+                        IsSending = false;
+                        return;
+                    }
+
                     if (!int.TryParse(GummiesDryingTemp, NumberStyles.Integer, CultureInfo.InvariantCulture, out var gummiesDryingTemp) || gummiesDryingTemp < 0)
                     {
                         Status = "Invalid drying temperature";
@@ -382,7 +390,7 @@ namespace PrinterGUI.ViewModels
                         points.AddRange(blisterPoints);
                     }
 
-                    var gummiesGcode = BuildGummiesGcode(extrusionAmount, waitSeconds, extrusionSpeedPercent, gummiesDryingTemp, gummiesDryingTime, gummiesDryingTimeRT, double.Parse(GummiesMmPerMl, CultureInfo.InvariantCulture), points);
+                    var gummiesGcode = BuildGummiesGcode(extrusionAmount, waitSeconds, extrusionSpeedPercent, gummiesExtrusionTemp, gummiesDryingTemp, gummiesDryingTime, gummiesDryingTimeRT, double.Parse(GummiesMmPerMl, CultureInfo.InvariantCulture), points);
                     await File.WriteAllTextAsync(tempPath, gummiesGcode, _cts.Token);
 
                     try
@@ -960,6 +968,7 @@ namespace PrinterGUI.ViewModels
             double extrusionAmount,
             int waitSeconds,
             int extrusionSpeedPercent,
+            int extrusionTemp,
             int dryingTemp,
             int dryingTimeMinutes,
             int dryingTimeRTMinutes,
@@ -986,6 +995,8 @@ namespace PrinterGUI.ViewModels
             sb.AppendLine("G21 \t\t; set units to millimeters");
             sb.AppendLine("G90 \t\t; use absolute coordinates");
             sb.AppendLine("M82 \t\t; use absolute distances for extrusion");
+            if (extrusionTemp > 0)
+                sb.AppendLine($"M109 S{extrusionTemp} ; set extruder temp and wait");
             sb.AppendLine("G92 E0");
             sb.AppendLine();
             sb.AppendLine("; layer change");

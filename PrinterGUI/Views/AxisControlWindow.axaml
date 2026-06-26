@@ -18,8 +18,8 @@
   <Grid RowDefinitions="*,Auto" Margin="12">
     <ScrollViewer Grid.Row="0">
       <StackPanel Spacing="16">
-        <!-- Main Control Grid: XY Cross + Z/E0/E1 Columns -->
-        <Grid ColumnDefinitions="Auto,8,Auto" HorizontalAlignment="Center">
+        <!-- Main Control Grid: XY Cross + Z/E0/E1 Columns + Temp Control -->
+        <Grid ColumnDefinitions="Auto,20,Auto,20,Auto" HorizontalAlignment="Center">
           <!-- XY Cross Control (Left) -->
           <Grid Grid.Column="0" ColumnDefinitions="60,60,60,60,60" RowDefinitions="45,45,45,45,45">
             <Button Grid.Row="0" Grid.Column="2" Content="Y +10" Command="{Binding MoveYCommand}" CommandParameter="10" Margin="1" Width="58" Height="43"/>
@@ -47,6 +47,23 @@
             <Button Grid.Row="4" Grid.Column="2" Content="E0 +10" Command="{Binding MoveE0Command}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
             <Button Grid.Row="4" Grid.Column="4" Content="E1 +10" Command="{Binding MoveE1Command}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
           </Grid>
+
+          <!-- Temp control -->
+          <StackPanel Grid.Column="4" Spacing="6" VerticalAlignment="Center" Width="170">
+            <TextBlock Text="temp control" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+            <TextBlock Text="extruder temp (&#176;C)" HorizontalAlignment="Center"/>
+            <TextBox x:Name="ExtruderTempTextBox"
+                     Text="{Binding ExtruderTempControl}"
+                     Width="90"
+                     HorizontalAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     GotFocus="TextBox_GotFocus"
+                     LostFocus="TextBox_LostFocus"/>
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+              <Button Content="START" Command="{Binding StartTempControlCommand}" Width="70" Height="40"/>
+              <Button Content="STOP" Command="{Binding StopTempControlCommand}" Width="70" Height="40"/>
+            </StackPanel>
+          </StackPanel>
         </Grid>
 
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" HorizontalAlignment="Center">

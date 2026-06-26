@@ -161,6 +161,12 @@
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
+            <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
+              <TextBlock Text="extrusion temp (&#176;C)" Width="132" VerticalAlignment="Center"/>
+              <TextBox x:Name="GummiesExtrusionTempTextBox" Text="{Binding GummiesExtrusionTemp}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+            </StackPanel>
+
             <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
               <TextBlock Text="Drying Time RT (min)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="GummiesDryingTimeRTTextBox" Text="{Binding GummiesDryingTimeRT}" Width="60"
