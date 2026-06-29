@@ -82,11 +82,6 @@
               <TextBlock Text="Drying Time (min)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="DryingTimeTextBox" Text="{Binding DryingTime}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
-
-              <!-- NEW: live extruder temp -->
-              <TextBlock Text="  Extruder:" VerticalAlignment="Center" Margin="10,0,4,0"/>
-              <TextBlock Text="{Binding ExtruderTemperatureC}" VerticalAlignment="Center" FontWeight="Bold"/>
-              <TextBlock Text=" &#176;C" VerticalAlignment="Center"/>
             </StackPanel>
 
             <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
@@ -147,10 +142,7 @@
               <TextBlock Text="{Binding OvenTemperatureC}" VerticalAlignment="Center" FontWeight="Bold"/>
               <TextBlock Text=" &#176;C" VerticalAlignment="Center"/>
               
-              <!-- NEW: live extruder temp -->
-              <TextBlock Text="  Extruder:" VerticalAlignment="Center" Margin="10,0,4,0"/>
-              <TextBlock Text="{Binding ExtruderTemperatureC}" VerticalAlignment="Center" FontWeight="Bold"/>
-              <TextBlock Text=" &#176;C" VerticalAlignment="Center"/>
+             
             </StackPanel>
 
             <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
@@ -161,8 +153,13 @@
 
             <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
               <TextBlock Text="Drying Time (min)" Width="132" VerticalAlignment="Center"/>
-              <TextBox x:Name="GummiesDryingTimeTextBox" Text="{Binding GummiesDryingTime}" Width="60"
+              <TextBox x:Name="GummiesDryingTimeTextBox" Text="{Binding DryingTime}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+
+              <!-- NEW: live extruder temp directly under oven -->
+              <TextBlock Text="  Extruder:" VerticalAlignment="Center" Margin="10,0,4,0"/>
+              <TextBlock Text="{Binding ExtruderTemperatureC}" VerticalAlignment="Center" FontWeight="Bold"/>
+              <TextBlock Text=" &#176;C" VerticalAlignment="Center"/>
             </StackPanel>
 
             <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
