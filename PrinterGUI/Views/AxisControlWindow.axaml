@@ -7,7 +7,7 @@
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="650"
         x:Class="PrinterGUI.Views.AxisControlWindow"
         x:DataType="vm:AxisControlViewModel"
-        Title="Axis Control"
+        Title="Manual Control"
         Width="900" Height="650"
         CanResize="False">
 
@@ -63,6 +63,15 @@
               <Button Content="START" Command="{Binding StartTempControlCommand}" Width="70" Height="40"/>
               <Button Content="STOP" Command="{Binding StopTempControlCommand}" Width="70" Height="40"/>
             </StackPanel>
+            
+            <!-- Current Temperature Display -->
+            <TextBlock Text="current temp (°C)" HorizontalAlignment="Center" Margin="0,12,0,0"/>
+            <Border HorizontalAlignment="Center" Width="90">
+              <TextBlock Text="{Binding CurrentExtruderTemp}"
+                         HorizontalAlignment="Center"
+                         FontSize="14"
+                         FontWeight="SemiBold"/>
+            </Border>
           </StackPanel>
         </Grid>
 

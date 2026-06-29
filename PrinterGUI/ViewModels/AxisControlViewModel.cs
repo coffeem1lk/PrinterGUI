@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO.Ports;
+using System.Threading; 
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -14,6 +15,7 @@ namespace PrinterGUI.ViewModels
         void Notify(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         readonly string _serialPort;
+        CancellationTokenSource? _tempReadingCts;
 
         string _status = "Ready";
         public string Status { get => _status; set { _status = value; Notify(nameof(Status)); } }
@@ -26,6 +28,13 @@ namespace PrinterGUI.ViewModels
         {
             get => _extruderTempControl;
             set { _extruderTempControl = value; Notify(nameof(ExtruderTempControl)); }
+        }
+
+        string _currentExtruderTemp = "0";
+        public string CurrentExtruderTemp
+        {
+            get => _currentExtruderTemp;
+            set { _currentExtruderTemp = value; Notify(nameof(CurrentExtruderTemp)); }
         }
 
         string _response = string.Empty;
@@ -57,6 +66,102 @@ namespace PrinterGUI.ViewModels
 
             StartTempControlCommand = new RelayCommand(async _ => await StartTempControlAsync());
             StopTempControlCommand = new RelayCommand(async _ => await StopTempControlAsync());
+
+            // Start reading temperature
+            StartTemperatureReading();
+        }
+
+        void StartTemperatureReading()
+        {
+            _tempReadingCts = new CancellationTokenSource();
+            _ = ReadTemperaturePeriodicAsync(_tempReadingCts.Token);
+        }
+
+        async Task ReadTemperaturePeriodicAsync(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(1000, cancellationToken);
+                    await ReadCurrentTemperatureAsync();
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error reading temperature: {ex.Message}");
+                }
+            }
+        }
+
+        async Task ReadCurrentTemperatureAsync()
+        {
+            try
+            {
+                using var port = new SerialPort(_serialPort, 115200)
+                {
+                    NewLine = "\n",
+                    ReadTimeout = 500,
+                    WriteTimeout = 500,
+                    DtrEnable = true,
+                    RtsEnable = true
+                };
+
+                port.Open();
+                await Task.Delay(100);
+
+                port.WriteLine("M105");
+                await Task.Delay(50);
+
+                var response = string.Empty;
+                var startTime = DateTime.Now;
+                var maxWaitTime = TimeSpan.FromSeconds(2);
+
+                while ((DateTime.Now - startTime) < maxWaitTime)
+                {
+                    try
+                    {
+                        if (port.BytesToRead > 0)
+                        {
+                            var line = port.ReadLine().Trim();
+                            Debug.WriteLine($"Temp response: {line}");
+
+                            if (!string.IsNullOrEmpty(line))
+                            {
+                                response = line;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            await Task.Delay(25);
+                        }
+                    }
+                    catch (TimeoutException)
+                    {
+                        await Task.Delay(25);
+                    }
+                }
+
+                port.Close();
+
+                // Parse temperature from response (e.g., "T:25.5 /0.0 B:25.0 /0.0")
+                if (!string.IsNullOrEmpty(response))
+                {
+                    var tempMatch = System.Text.RegularExpressions.Regex.Match(response, @"T:([\d.]+)");
+                    if (tempMatch.Success && double.TryParse(tempMatch.Groups[1].Value, out var temp))
+                    {
+                        CurrentExtruderTemp = temp.ToString("F1");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Exception reading temperature: {ex.Message}");
+            }
         }
 
         async Task StartTempControlAsync()

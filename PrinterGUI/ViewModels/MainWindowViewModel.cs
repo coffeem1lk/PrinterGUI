@@ -60,8 +60,20 @@ namespace PrinterGUI.ViewModels
             set { _ovenTemperatureC = value; Notify(nameof(OvenTemperatureC)); }
         }
 
+        // NEW: actual extruder temperature shown in UI
+        string _extruderTemperatureC = "--";
+        public string ExtruderTemperatureC
+        {
+            get => _extruderTemperatureC;
+            set { _extruderTemperatureC = value; Notify(nameof(ExtruderTemperatureC)); }
+        }
+
         bool _isDryingPhase;
+
+        // Add these fields at the class level
+        CancellationTokenSource? _temperaturePollingCts;
         DateTime _lastOvenTempUpdateUtc = DateTime.MinValue;
+        DateTime _lastExtruderTempUpdateUtc = DateTime.MinValue;
 
         public string LayerHeight { get; set; } = "0.3";
         public string Infill { get; set; } = "90";
@@ -133,6 +145,116 @@ namespace PrinterGUI.ViewModels
 
             SendToPrinterCommand = new RelayCommand(async _ => await SendToPrinterAsync(), _ => CanSend);
             StopPrintCommand = new RelayCommand(async _ => await StopPrintAsync(), _ => CanStop);
+
+            // Start the temperature polling task
+            StartTemperaturePolling();
+        }
+
+        private void StartTemperaturePolling()
+        {
+            _temperaturePollingCts = new CancellationTokenSource();
+            _ = PollTemperaturesAsync(_temperaturePollingCts.Token);
+        }
+
+        private async Task PollTemperaturesAsync(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(1000, cancellationToken);
+                    await ReadTemperaturesAsync();
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error polling temperatures: {ex.Message}");
+                }
+            }
+        }
+
+        private async Task ReadTemperaturesAsync()
+        {
+            try
+            {
+                using var port = new System.IO.Ports.SerialPort(SerialPortPath, 115200)
+                {
+                    NewLine = "\n",
+                    ReadTimeout = 500,
+                    WriteTimeout = 500,
+                    DtrEnable = true,
+                    RtsEnable = true
+                };
+
+                port.Open();
+                await Task.Delay(100);
+
+                port.WriteLine("M105");
+                await Task.Delay(50);
+
+                var response = string.Empty;
+                var startTime = DateTime.Now;
+                var maxWaitTime = TimeSpan.FromSeconds(2);
+
+                while ((DateTime.Now - startTime) < maxWaitTime)
+                {
+                    try
+                    {
+                        if (port.BytesToRead > 0)
+                        {
+                            var line = port.ReadLine().Trim();
+                            if (!string.IsNullOrEmpty(line))
+                            {
+                                response = line;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            await Task.Delay(25);
+                        }
+                    }
+                    catch (TimeoutException)
+                    {
+                        await Task.Delay(25);
+                    }
+                }
+
+                port.Close();
+
+                // Parse and update temperatures
+                if (!string.IsNullOrEmpty(response))
+                {
+                    var now = DateTime.UtcNow;
+
+                    // Extract extruder temperature (T:)
+                    if (TryExtractTempAfterToken(response, "T:", out var extruderTemp))
+                    {
+                        if ((now - _lastExtruderTempUpdateUtc).TotalMilliseconds >= 1000)
+                        {
+                            ExtruderTemperatureC = extruderTemp.ToString("0.0", CultureInfo.InvariantCulture);
+                            _lastExtruderTempUpdateUtc = now;
+                        }
+                    }
+
+                    // Extract oven/chamber temperature (C:, B:, or T: as fallback)
+                    if (TryExtractOvenTemperatureC(response, out var ovenTemp))
+                    {
+                        if ((now - _lastOvenTempUpdateUtc).TotalMilliseconds >= 1000)
+                        {
+                            OvenTemperatureC = ovenTemp.ToString("0.0", CultureInfo.InvariantCulture);
+                            _lastOvenTempUpdateUtc = now;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Exception reading temperatures: {ex.Message}");
+            }
         }
 
         void ApplyDefaultModelForType()
@@ -798,6 +920,9 @@ namespace PrinterGUI.ViewModels
 
         public void Dispose()
         {
+            _temperaturePollingCts?.Cancel();
+            _temperaturePollingCts?.Dispose();
+
             try
             {
                 _watcher?.Dispose();
@@ -1232,15 +1357,8 @@ namespace PrinterGUI.ViewModels
                 _isDryingPhase = true;
             }
 
-            if (_isDryingPhase && TryExtractOvenTemperatureC(msg, out var tempC))
-            {
-                var now = DateTime.UtcNow;
-                if ((now - _lastOvenTempUpdateUtc).TotalMilliseconds >= 1000)
-                {
-                    OvenTemperatureC = tempC.ToString("0.0", CultureInfo.InvariantCulture);
-                    _lastOvenTempUpdateUtc = now;
-                }
-            }
+            // Let the polling task handle temperature updates
+            // This method can be simplified or focus on phase detection only
 
             if (msg.StartsWith("> M155 S0", StringComparison.OrdinalIgnoreCase) ||
                 msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase) ||

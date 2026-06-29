@@ -67,7 +67,7 @@
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
 
               <!-- NEW: live oven temp -->
-              <TextBlock Text="  Actual:" VerticalAlignment="Center" Margin="10,0,4,0"/>
+              <TextBlock Text="  Oven:" VerticalAlignment="Center" Margin="10,0,4,0"/>
               <TextBlock Text="{Binding OvenTemperatureC}" VerticalAlignment="Center" FontWeight="Bold"/>
               <TextBlock Text=" &#176;C" VerticalAlignment="Center"/>
             </StackPanel>
@@ -82,6 +82,11 @@
               <TextBlock Text="Drying Time (min)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="DryingTimeTextBox" Text="{Binding DryingTime}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+
+              <!-- NEW: live extruder temp -->
+              <TextBlock Text="  Extruder:" VerticalAlignment="Center" Margin="10,0,4,0"/>
+              <TextBlock Text="{Binding ExtruderTemperatureC}" VerticalAlignment="Center" FontWeight="Bold"/>
+              <TextBlock Text=" &#176;C" VerticalAlignment="Center"/>
             </StackPanel>
 
             <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,6">
@@ -138,8 +143,13 @@
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
 
               <!-- NEW: live oven temp -->
-              <TextBlock Text="  Actual:" VerticalAlignment="Center" Margin="10,0,4,0"/>
+              <TextBlock Text="  Oven:" VerticalAlignment="Center" Margin="10,0,4,0"/>
               <TextBlock Text="{Binding OvenTemperatureC}" VerticalAlignment="Center" FontWeight="Bold"/>
+              <TextBlock Text=" &#176;C" VerticalAlignment="Center"/>
+              
+              <!-- NEW: live extruder temp -->
+              <TextBlock Text="  Extruder:" VerticalAlignment="Center" Margin="10,0,4,0"/>
+              <TextBlock Text="{Binding ExtruderTemperatureC}" VerticalAlignment="Center" FontWeight="Bold"/>
               <TextBlock Text=" &#176;C" VerticalAlignment="Center"/>
             </StackPanel>
 
