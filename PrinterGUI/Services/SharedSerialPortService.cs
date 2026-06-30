@@ -42,14 +42,18 @@ namespace PrinterGUI.Services
                 try
                 {
                     _port?.WriteLine(command);
+                    Thread.Sleep(50); // Let printer process command
+                    
                     var response = string.Empty;
-                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    var startTime = DateTime.UtcNow;
 
-                    while (sw.ElapsedMilliseconds < timeoutMs)
+                    while ((DateTime.UtcNow - startTime).TotalMilliseconds < timeoutMs)
                     {
                         if (_port?.BytesToRead > 0)
                         {
-                            response += _port.ReadExisting();
+                            var chunk = _port.ReadExisting();
+                            response += chunk;
+                            
                             if (response.Contains("ok") || response.Contains("\n"))
                                 break;
                         }
@@ -67,9 +71,6 @@ namespace PrinterGUI.Services
             }
         }
 
-        /// <summary>
-        /// Write a line to the serial port (used by SendFileAsync).
-        /// </summary>
         public void WriteLine(string line)
         {
             lock (_portLock)
@@ -80,13 +81,20 @@ namespace PrinterGUI.Services
                 if (_port?.IsOpen != true)
                     OpenPort();
 
-                _port?.WriteLine(line);
+                try
+                {
+                    _port?.WriteLine(line);
+                    Thread.Sleep(50); // Ensure line is sent
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error writing line: {ex.Message}");
+                    ClosePort();
+                    throw;
+                }
             }
         }
 
-        /// <summary>
-        /// Read existing data from the port buffer.
-        /// </summary>
         public string ReadExisting()
         {
             lock (_portLock)
@@ -105,9 +113,6 @@ namespace PrinterGUI.Services
             }
         }
 
-        /// <summary>
-        /// Check how many bytes are available to read.
-        /// </summary>
         public int BytesToRead
         {
             get
@@ -121,9 +126,6 @@ namespace PrinterGUI.Services
             }
         }
 
-        /// <summary>
-        /// Read a line from the serial port.
-        /// </summary>
         public string ReadLine()
         {
             lock (_portLock)
@@ -131,13 +133,17 @@ namespace PrinterGUI.Services
                 if (_disposed || _port?.IsOpen != true)
                     throw new InvalidOperationException("Port not open");
 
-                return _port?.ReadLine() ?? string.Empty;
+                try
+                {
+                    return _port?.ReadLine() ?? string.Empty;
+                }
+                catch (TimeoutException)
+                {
+                    return string.Empty;
+                }
             }
         }
 
-        /// <summary>
-        /// Ensure the port is open. Called before sending files.
-        /// </summary>
         public void EnsureOpen()
         {
             lock (_portLock)
@@ -150,9 +156,6 @@ namespace PrinterGUI.Services
             }
         }
 
-        /// <summary>
-        /// Clear the read buffer.
-        /// </summary>
         public void DiscardInBuffer()
         {
             lock (_portLock)
@@ -175,8 +178,8 @@ namespace PrinterGUI.Services
                 _port = new SerialPort(_portName, BaudRate)
                 {
                     NewLine = "\n",
-                    ReadTimeout = 5000,
-                    WriteTimeout = 15000,
+                    ReadTimeout = 500,
+                    WriteTimeout = 500,
                     DtrEnable = true,
                     RtsEnable = true
                 };

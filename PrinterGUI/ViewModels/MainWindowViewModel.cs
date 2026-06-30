@@ -158,26 +158,6 @@ namespace PrinterGUI.ViewModels
             _ = PollTemperaturesAsync(_temperaturePollingCts.Token);
         }
 
-        private async Task PollTemperaturesAsync(CancellationToken cancellationToken)
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                try
-                {
-                    await Task.Delay(1000, cancellationToken);
-                    await ReadTemperaturesAsync();
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error polling temperatures: {ex.Message}");
-                }
-            }
-        }
-
         private async Task ReadTemperaturesAsync()
         {
             try
@@ -350,6 +330,7 @@ namespace PrinterGUI.ViewModels
             // create temp gcode via slicer
             string tempPath = Path.Combine(Path.GetTempPath(), $"print_{Guid.NewGuid():N}.gcode");
             IsSending = true;
+            _isPrinting = true;
             _cts = new CancellationTokenSource();
             Progress = 0;
             Status = IsGummies ? "Generating Gummies G-code..." : "Slicing (PrusaSlicer) before send...";
@@ -606,6 +587,7 @@ namespace PrinterGUI.ViewModels
             finally
             {
                 IsSending = false;
+                _isPrinting = false;
                 _cts?.Dispose();
                 _cts = null;
 
@@ -907,6 +889,7 @@ namespace PrinterGUI.ViewModels
             }
 
             IsSending = true;
+            _isPrinting = true;
             _cts = new CancellationTokenSource();
             Progress = 0;
             Status = $"Sending custom G-code: {Path.GetFileName(gcodePath)}";
@@ -934,6 +917,7 @@ namespace PrinterGUI.ViewModels
             finally
             {
                 IsSending = false;
+                _isPrinting = false;
                 _cts?.Dispose();
                 _cts = null;
             }
@@ -1330,6 +1314,33 @@ namespace PrinterGUI.ViewModels
             else if (msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
             {
                 _isDryingPhase = true;
+            }
+        }
+
+        private bool _isPrinting;
+
+        private async Task PollTemperaturesAsync(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(1000, cancellationToken);
+
+                    // Skip temperature polling during active printing to avoid port conflicts
+                    if (!_isPrinting)
+                    {
+                        await ReadTemperaturesAsync();
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error polling temperatures: {ex.Message}");
+                }
             }
         }
     }
