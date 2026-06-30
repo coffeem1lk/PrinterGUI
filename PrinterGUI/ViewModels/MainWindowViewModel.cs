@@ -128,6 +128,7 @@ namespace PrinterGUI.ViewModels
         public ICommand SendToPrinterCommand { get; }
 
         readonly SerialPrinterService _serial = new SerialPrinterService();
+        readonly SharedSerialPortService _sharedPort;
 
         CancellationTokenSource? _cts;
 
@@ -139,6 +140,7 @@ namespace PrinterGUI.ViewModels
         public MainWindowViewModel()
         {
             _uiContext = SynchronizationContext.Current;
+            _sharedPort = new SharedSerialPortService(SerialPortPath);
 
             LoadModels();
             StartWatchingModelsFolder();
@@ -180,52 +182,8 @@ namespace PrinterGUI.ViewModels
         {
             try
             {
-                using var port = new System.IO.Ports.SerialPort(SerialPortPath, 115200)
-                {
-                    NewLine = "\n",
-                    ReadTimeout = 500,
-                    WriteTimeout = 500,
-                    DtrEnable = true,
-                    RtsEnable = true
-                };
+                var response = await _sharedPort.SendCommandAsync("M105", 2000);
 
-                port.Open();
-                await Task.Delay(100);
-
-                port.WriteLine("M105");
-                await Task.Delay(50);
-
-                var response = string.Empty;
-                var startTime = DateTime.Now;
-                var maxWaitTime = TimeSpan.FromSeconds(2);
-
-                while ((DateTime.Now - startTime) < maxWaitTime)
-                {
-                    try
-                    {
-                        if (port.BytesToRead > 0)
-                        {
-                            var line = port.ReadLine().Trim();
-                            if (!string.IsNullOrEmpty(line))
-                            {
-                                response = line;
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            await Task.Delay(25);
-                        }
-                    }
-                    catch (TimeoutException)
-                    {
-                        await Task.Delay(25);
-                    }
-                }
-
-                port.Close();
-
-                // Parse and update temperatures
                 if (!string.IsNullOrEmpty(response))
                 {
                     var now = DateTime.UtcNow;
@@ -633,7 +591,7 @@ namespace PrinterGUI.ViewModels
             bool sendSucceeded = false;
             try
             {
-                await _serial.SendFileAsync(tempPath, SerialPortPath, 115200, progText, progPercent, _cts.Token);
+                await _serial.SendFileAsync(tempPath, _sharedPort, progText, progPercent, _cts.Token);
                 Status = "Send complete";
                 sendSucceeded = true;
             }
@@ -922,6 +880,7 @@ namespace PrinterGUI.ViewModels
         {
             _temperaturePollingCts?.Cancel();
             _temperaturePollingCts?.Dispose();
+            _sharedPort?.Dispose();
 
             try
             {
@@ -959,7 +918,7 @@ namespace PrinterGUI.ViewModels
 
             try
             {
-                await _serial.SendFileAsync(gcodePath, SerialPortPath, 115200, progText, progPercent, _cts.Token);
+                await _serial.SendFileAsync(gcodePath, _sharedPort, progText, progPercent, _cts.Token);
                 Status = "Custom G-code send complete";
             }
             catch (OperationCanceledException)
