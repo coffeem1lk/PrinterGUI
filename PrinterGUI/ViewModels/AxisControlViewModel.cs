@@ -2,10 +2,10 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO.Ports;
-using System.Threading; 
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using PrinterGUI.Services;
 
 namespace PrinterGUI.ViewModels
 {
@@ -14,7 +14,7 @@ namespace PrinterGUI.ViewModels
         public event PropertyChangedEventHandler? PropertyChanged;
         void Notify(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        readonly string _serialPort;
+        readonly SharedSerialPortService _sharedPort;
         CancellationTokenSource? _tempReadingCts;
 
         string _status = "Ready";
@@ -51,9 +51,9 @@ namespace PrinterGUI.ViewModels
         public ICommand StartTempControlCommand { get; }
         public ICommand StopTempControlCommand { get; }
 
-        public AxisControlViewModel(string serialPort = "/dev/ttyACM0")
+        public AxisControlViewModel(SharedSerialPortService sharedPort)
         {
-            _serialPort = serialPort;
+            _sharedPort = sharedPort;
 
             MoveXCommand = new RelayCommand(async p => await MoveAxisAsync("X", p));
             MoveYCommand = new RelayCommand(async p => await MoveAxisAsync("Y", p));
@@ -101,52 +101,7 @@ namespace PrinterGUI.ViewModels
         {
             try
             {
-                using var port = new SerialPort(_serialPort, 115200)
-                {
-                    NewLine = "\n",
-                    ReadTimeout = 500,
-                    WriteTimeout = 500,
-                    DtrEnable = true,
-                    RtsEnable = true
-                };
-
-                port.Open();
-                await Task.Delay(100);
-
-                port.WriteLine("M105");
-                await Task.Delay(50);
-
-                var response = string.Empty;
-                var startTime = DateTime.Now;
-                var maxWaitTime = TimeSpan.FromSeconds(2);
-
-                while ((DateTime.Now - startTime) < maxWaitTime)
-                {
-                    try
-                    {
-                        if (port.BytesToRead > 0)
-                        {
-                            var line = port.ReadLine().Trim();
-                            Debug.WriteLine($"Temp response: {line}");
-
-                            if (!string.IsNullOrEmpty(line))
-                            {
-                                response = line;
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            await Task.Delay(25);
-                        }
-                    }
-                    catch (TimeoutException)
-                    {
-                        await Task.Delay(25);
-                    }
-                }
-
-                port.Close();
+                var response = await _sharedPort.SendCommandAsync("M105", 2000);
 
                 // Parse temperature from response (e.g., "T:25.5 /0.0 B:25.0 /0.0")
                 if (!string.IsNullOrEmpty(response))
@@ -155,6 +110,10 @@ namespace PrinterGUI.ViewModels
                     if (tempMatch.Success && double.TryParse(tempMatch.Groups[1].Value, out var temp))
                     {
                         CurrentExtruderTemp = temp.ToString("F1");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Could not parse temp from: {response}");
                     }
                 }
             }
@@ -232,69 +191,27 @@ namespace PrinterGUI.ViewModels
 
             try
             {
-                using var port = new SerialPort(_serialPort, 115200)
-                {
-                    NewLine = "\n",
-                    ReadTimeout = 1000,
-                    WriteTimeout = 2000,
-                    DtrEnable = true,
-                    RtsEnable = true
-                };
-
-                port.Open();
-                await Task.Delay(200);
+                var responseBuilder = new System.Text.StringBuilder();
 
                 foreach (var line in gcode.Split('\n'))
                 {
                     if (string.IsNullOrWhiteSpace(line)) continue;
-                    port.WriteLine(line.Trim());
+                    
+                    var response = await _sharedPort.SendCommandAsync(line.Trim(), 5000);
+                    if (!string.IsNullOrEmpty(response))
+                    {
+                        responseBuilder.AppendLine(response);
+                        Debug.WriteLine($"Response: {response}");
+                    }
+                    
                     await Task.Delay(50);
                 }
-
-                var responseBuilder = new System.Text.StringBuilder();
-                var startTime = DateTime.Now;
-                var maxWaitTime = TimeSpan.FromSeconds(5);
-                bool gotOk = false;
-
-                while ((DateTime.Now - startTime) < maxWaitTime)
-                {
-                    try
-                    {
-                        if (port.BytesToRead > 0)
-                        {
-                            var resp = port.ReadLine().Trim();
-                            Debug.WriteLine(resp);
-
-                            if (!string.IsNullOrEmpty(resp))
-                            {
-                                responseBuilder.AppendLine(resp);
-
-                                if (resp.Equals("ok", StringComparison.OrdinalIgnoreCase) ||
-                                    resp.StartsWith("ok", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    gotOk = true;
-                                    break;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            await Task.Delay(50);
-                        }
-                    }
-                    catch (TimeoutException)
-                    {
-                        await Task.Delay(50);
-                    }
-                }
-
-                port.Close();
 
                 Response = responseBuilder.Length > 0
                     ? responseBuilder.ToString().Trim()
                     : "(no response - check serial port connection)";
 
-                Status = gotOk ? "Command completed successfully" : "Command sent (no 'ok' received)";
+                Status = "Command sent successfully";
             }
             catch (Exception ex)
             {

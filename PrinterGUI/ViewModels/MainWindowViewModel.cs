@@ -632,6 +632,8 @@ namespace PrinterGUI.ViewModels
             }
         }
 
+        public SharedSerialPortService GetSharedPort() => _sharedPort;
+
         async Task DeleteOldGeneratedFilesAsync(string stlPath)
         {
             try

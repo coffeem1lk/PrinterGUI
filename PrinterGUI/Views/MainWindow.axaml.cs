@@ -136,7 +136,7 @@ namespace PrinterGUI.Views
         {
             if (DataContext is MainWindowViewModel vm)
             {
-                var axisWindow = new AxisControlWindow(vm.SerialPortPath);
+                var axisWindow = new AxisControlWindow(vm.GetSharedPort());
                 axisWindow.Show();
             }
         }
