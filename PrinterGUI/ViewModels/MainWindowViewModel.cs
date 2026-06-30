@@ -572,7 +572,7 @@ namespace PrinterGUI.ViewModels
             bool sendSucceeded = false;
             try
             {
-                await _serial.SendFileAsync(tempPath, _sharedPort, progText, progPercent, _cts.Token);
+                await _serial.SendFileAsync(tempPath, SerialPortPath, 115200, progText, progPercent, _cts.Token);
                 Status = "Send complete";
                 sendSucceeded = true;
             }
@@ -903,7 +903,7 @@ namespace PrinterGUI.ViewModels
 
             try
             {
-                await _serial.SendFileAsync(gcodePath, _sharedPort, progText, progPercent, _cts.Token);
+                await _serial.SendFileAsync(gcodePath, SerialPortPath, 115200, progText, progPercent, _cts.Token);
                 Status = "Custom G-code send complete";
             }
             catch (OperationCanceledException)

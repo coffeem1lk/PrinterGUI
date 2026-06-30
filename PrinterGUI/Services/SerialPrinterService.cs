@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.IO.Ports;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,10 +10,10 @@ namespace PrinterGUI.Services
     public class SerialPrinterService
     {
         /// <summary>
-        /// Send a G-code file to a printer using a shared serial port.
-        /// Reads printer responses and reports progress.
+        /// Send a G-code file to a printer over serial port.
+        /// Uses its own port connection to avoid blocking the shared port.
         /// </summary>
-        public async Task SendFileAsync(string filePath, SharedSerialPortService sharedPort, IProgress<string>? statusProgress = null, IProgress<int>? percentProgress = null, CancellationToken ct = default)
+        public async Task SendFileAsync(string filePath, string portName, int baudRate = 115200, IProgress<string>? statusProgress = null, IProgress<int>? percentProgress = null, CancellationToken ct = default)
         {
             if (!File.Exists(filePath))
                 throw new FileNotFoundException("G-code file not found", filePath);
@@ -20,11 +21,29 @@ namespace PrinterGUI.Services
             string[] lines = await File.ReadAllLinesAsync(filePath, ct).ConfigureAwait(false);
             int total = lines.Length;
 
+            using SerialPort port = new SerialPort(portName, baudRate)
+            {
+                NewLine = "\n",
+                ReadTimeout = 500,
+                WriteTimeout = 500,
+                DtrEnable = true,
+                RtsEnable = true
+            };
+
             try
             {
-                sharedPort.EnsureOpen();
-                sharedPort.DiscardInBuffer();
+                port.Open();
                 await Task.Delay(300, ct).ConfigureAwait(false);
+
+                // Clear any existing data
+                try
+                {
+                    while (port.BytesToRead > 0)
+                    {
+                        port.ReadLine();
+                    }
+                }
+                catch { }
 
                 for (int i = 0; i < total; i++)
                 {
@@ -45,8 +64,9 @@ namespace PrinterGUI.Services
                         continue;
                     }
 
-                    sharedPort.WriteLine(command);
+                    port.WriteLine(command);
                     statusProgress?.Report($"> {line}");
+                    await Task.Delay(10, ct).ConfigureAwait(false);
 
                     // Dynamic ACK timeout
                     int ackTimeoutMs = 15000;
@@ -92,9 +112,9 @@ namespace PrinterGUI.Services
 
                         try
                         {
-                            if (sharedPort.BytesToRead > 0)
+                            if (port.BytesToRead > 0)
                             {
-                                string resp = sharedPort.ReadLine();
+                                string resp = port.ReadLine();
                                 statusProgress?.Report(resp);
 
                                 var r = resp.ToLowerInvariant();
@@ -129,6 +149,10 @@ namespace PrinterGUI.Services
             {
                 statusProgress?.Report($"Error: {ex.Message}");
                 throw;
+            }
+            finally
+            {
+                try { port.Close(); } catch { }
             }
         }
     }
