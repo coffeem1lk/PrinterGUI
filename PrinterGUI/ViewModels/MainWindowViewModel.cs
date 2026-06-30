@@ -555,6 +555,7 @@ namespace PrinterGUI.ViewModels
             }
 
             Status = "Opening serial port...";
+            _sharedPort.Pause();
             var progText = new Progress<string>(s =>
             {
                 var msg = s?.Trim() ?? string.Empty;
@@ -590,6 +591,7 @@ namespace PrinterGUI.ViewModels
                 _isPrinting = false;
                 _cts?.Dispose();
                 _cts = null;
+                _sharedPort.Resume();
 
                 try { File.Delete(tempPath); } catch { }
 
@@ -893,6 +895,7 @@ namespace PrinterGUI.ViewModels
             _cts = new CancellationTokenSource();
             Progress = 0;
             Status = $"Sending custom G-code: {Path.GetFileName(gcodePath)}";
+            _sharedPort.Pause();
 
             var progText = new Progress<string>(s =>
             {
@@ -920,6 +923,7 @@ namespace PrinterGUI.ViewModels
                 _isPrinting = false;
                 _cts?.Dispose();
                 _cts = null;
+                _sharedPort.Resume();
             }
         }
 

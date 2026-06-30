@@ -209,6 +209,39 @@ namespace PrinterGUI.Services
             }
         }
 
+        /// <summary>
+        /// Temporarily close the port to allow other processes to use it.
+        /// Must be paired with Resume().
+        /// </summary>
+        public void Pause()
+        {
+            lock (_portLock)
+            {
+                ClosePort();
+            }
+        }
+
+        /// <summary>
+        /// Reopen the port after it was paused.
+        /// </summary>
+        public void Resume()
+        {
+            lock (_portLock)
+            {
+                if (_port?.IsOpen != true)
+                {
+                    try
+                    {
+                        OpenPort();
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error resuming port: {ex.Message}");
+                    }
+                }
+            }
+        }
+
         public void Dispose()
         {
             if (_disposed)
