@@ -60,7 +60,7 @@ namespace PrinterGUI.ViewModels
             MoveZCommand = new RelayCommand(async p => await MoveAxisAsync("Z", p));
             MoveE0Command = new RelayCommand(async p => await MoveExtruderAsync("E", p));
             MoveE1Command = new RelayCommand(async p => await MoveExtruderAsync("E", p, extruderIndex: 1));
-            HomeAllCommand = new RelayCommand(async _ => await SendGcodeAsync("G28"));
+            HomeAllCommand = new RelayCommand(async _ => await HomeAllAsync());
             DisableMotorsCommand = new RelayCommand(async _ => await SendGcodeAsync("M84"));
             SendCustomGcodeCommand = new RelayCommand(async _ => await SendCustomGcodeAsync());
 
@@ -167,7 +167,16 @@ namespace PrinterGUI.ViewModels
             }
 
             var toolCmd = extruderIndex == 0 ? "T0" : "T1";
-            var gcode = $"{toolCmd}\nG91\nG1 E{distance:F2} F400\nG1 F3000\nG90";
+            var resetToolCmd = extruderIndex == 0 ? string.Empty : "\nT0";
+            var gcode = $"{toolCmd}\nG91\nG1 E{distance:F2} F400\nG1 F3000\nG90{resetToolCmd}";
+            await SendGcodeAsync(gcode);
+        }
+
+        async Task HomeAllAsync()
+        {
+            // If "G28 Y0 F" was intentional, confirm the exact G-code.
+            // "G28 Y0 F" is not valid G-code as written.
+            var gcode = "T1\nG1 E-17 F800\nG28\nG28 Y0\nG1 E0 F800\nT0";
             await SendGcodeAsync(gcode);
         }
 

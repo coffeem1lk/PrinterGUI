@@ -84,14 +84,15 @@ namespace PrinterGUI.ViewModels
         async Task HomeAsync()
         {
             Status = string.Empty;
-            var response = await SendGcodeAsync("G28", timeoutSeconds: 30);
+
+            var response = await SendGcodeAsync("T1\nG1 E-17 F800\nG28", timeoutSeconds: 30);
 
             if (!string.IsNullOrEmpty(response))
             {
                 // Query current Z position after homing
                 var positionResponse = await SendGcodeAsync("M114");
                 _currentZPosition = ParseZPosition(positionResponse);
-                
+
                 CanAdjust = true;
                 UpdateCalculatedOffset();
             }
