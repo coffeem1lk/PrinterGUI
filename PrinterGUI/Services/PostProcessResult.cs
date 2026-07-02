@@ -80,6 +80,9 @@ namespace PrinterGUI.Services
             var dryingTimeMin = ToInt(meta.GetValueOrDefault("DryingTime"));
             var dryingTimeRTMin = ToInt(meta.GetValueOrDefault("DryingTimeRT"));
 
+            int? dryingTimeSeconds = dryingTimeMin.HasValue ? dryingTimeMin.Value * 60 : null;
+            int? dryingTimeRTSeconds = dryingTimeRTMin.HasValue ? dryingTimeRTMin.Value * 60 : null;
+
             // make backup if not present
             try
             {
@@ -112,11 +115,12 @@ namespace PrinterGUI.Services
             var outLines = new List<string>(lines.Length);
             var reM141 = new Regex(@"^\s*(M141)\s+S""([^""]+)""(.*)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
             var reG4 = new Regex(@"^\s*(G4)\s+S""([^""]+)""(.*)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            var reM221 = new Regex(@"^\s*(M221)\s+S""([^""]+)""(.*)$", RegexOptions.IgnoreCase | RegexOptions.Compiled); // NEW
 
-            int countM141 = 0, countG4_drying_time = 0, countG4_drying_time_rt = 0;
+            int countM141 = 0, countG4_drying_time = 0, countG4_drying_time_rt = 0, countM221 = 0;
 
-            int? dryingTimeSeconds = dryingTimeMin.HasValue ? dryingTimeMin.Value * 60 : null;
-            int? dryingTimeRTSeconds = dryingTimeRTMin.HasValue ? dryingTimeRTMin.Value * 60 : null;
+            // read FlowRatePercent from meta (if present)
+            var flowRatePercent = ToInt(meta.GetValueOrDefault("FlowRatePercent"));
 
             foreach (var ln in lines)
             {
@@ -155,12 +159,31 @@ namespace PrinterGUI.Services
                     }
                 }
 
+                if (!replaced)
+                {
+                    // NEW: handle M221 placeholder M221 S"FR_spercent"
+                    var m3 = reM221.Match(ln);
+                    if (m3.Success)
+                    {
+                        var inner = m3.Groups[2].Value;
+                        // Accept a couple of placeholder names commonly used
+                        if (( string.Equals(inner, "FR_percent", StringComparison.OrdinalIgnoreCase))
+                            && flowRatePercent.HasValue)
+                        {
+                            outLines.Add($"{m3.Groups[1].Value} S{flowRatePercent.Value}{m3.Groups[3].Value}");
+                            countM221++;
+                            replaced = true;
+                        }
+                    }
+                }
+
                 if (!replaced) outLines.Add(ln);
             }
 
             result.Counts["M141"] = countM141;
             result.Counts["G4_drying_time"] = countG4_drying_time;
             result.Counts["G4_drying_time_RT"] = countG4_drying_time_rt;
+            result.Counts["M221"] = countM221; // NEW
 
             // Insert processing marker near top (after initial comments) if not already present
             bool hasMarker = outLines.Count > 0 && outLines.Take(50).Any(l => l != null && l.Contains("; POST-PROCESSED-BY: post_process_gcode.cs"));

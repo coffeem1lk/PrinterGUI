@@ -40,16 +40,17 @@ namespace PrinterGUI.Services
             double layerHeight = 0.3,
             int infillPercent = 90,
             int nozzleTemp = 0,
-            int dryingTemp = 0,                // stored for later post-processing
-            int dryingTime = 0,               // stored for later post-processing (minutes)
-            int dryingTimeRT = 0,             // stored for later post-processing (minutes, RT)
+            int dryingTemp = 0,
+            int dryingTime = 0,
+            int dryingTimeRT = 0,
             double printSpeed = 11.5,
             string prusaSlicerPath = "prusa-slicer",
             string? profilePath = "/home/raspberrypie/config.ini",
             string? extraArgs = null,
             TimeSpan? timeout = null,
             IProgress<string>? outputProgress = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            int? flowRatePercent = null) // NEW optional parameter
         {
             if (!File.Exists(stlPath))
                 throw new FileNotFoundException("Input STL not found", stlPath);
@@ -92,6 +93,13 @@ namespace PrinterGUI.Services
             args.Append("--first-layer-infill-speed ").Append(printSpeed.ToString(CultureInfo.InvariantCulture)).Append(' ');
             args.Append("--perimeter-speed ").Append(printSpeed.ToString(CultureInfo.InvariantCulture)).Append(' ');
             args.Append("--external-perimeter-speed ").Append(printSpeed.ToString(CultureInfo.InvariantCulture)).Append(' ');
+
+            // for compatibility with older profiles, translate flowRatePercent to the equivalent volumetric setting
+            if (flowRatePercent.HasValue)
+            {
+                var flowRate = Math.Max(0.1, Math.Min(5.0, flowRatePercent.Value / 100.0)); // clamp to sensible range
+                args.Append("--filament-diameter ").Append(flowRate.ToString("F2", CultureInfo.InvariantCulture)).Append(' ');
+            }
 
             // append any extra args the caller wants
             if (!string.IsNullOrWhiteSpace(extraArgs))
@@ -220,7 +228,8 @@ namespace PrinterGUI.Services
                             DryingTimeRT = dryingTimeRT, // stored for later post-processor (minutes, RT)
                             PrusaSlicerExe = prusaSlicerPath,
                             ProfileUsed = profilePath,
-                            CommandLine = launchCmd
+                            CommandLine = launchCmd,
+                            FlowRatePercent = flowRatePercent // NEW
                         };
 
                         string metaPath = outputGcodePath + ".meta.json";

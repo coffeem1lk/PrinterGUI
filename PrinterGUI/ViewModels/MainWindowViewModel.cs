@@ -80,14 +80,15 @@ namespace PrinterGUI.ViewModels
         public string PrintSpeed { get; set; } = "11.5";
         public string DryingTime { get; set; } = "0";
         public string DryingTimeRT { get; set; } = "0";
+        public string FlowRatePercent { get; set; } = "100";
 
-        // NEW: ODF rectangle size (mm)
+        // ODF rectangle size (mm)
         public string OdfWidthMm { get; set; } = "20";
         public string OdfLengthMm { get; set; } = "30";
 
         public string OdfFilmCount { get; set; } = "1";
 
-        // NEW: Gummies-specific fields
+        // Gummies-specific fields
         public string GummiesMlPerGummy { get; set; } = "1";
         public string GummiesMmPerMl { get; set; } = "5";
         public string GummiesWaitBetweenSeconds { get; set; } = "5";
@@ -495,6 +496,10 @@ namespace PrinterGUI.ViewModels
                         return;
                     }
 
+                    int? flowRate = null;
+                    if (int.TryParse(FlowRatePercent, NumberStyles.Integer, CultureInfo.InvariantCulture, out var frVal))
+                        flowRate = frVal;
+
                     var resultPath = await GcodeGenerator.SliceWithPrusaAsync(
                         stlPath,
                         tempPath,
@@ -510,7 +515,8 @@ namespace PrinterGUI.ViewModels
                         extraArgs: null,
                         timeout: TimeSpan.FromMinutes(12),
                         outputProgress: slicerProgress,
-                        cancellationToken: _cts.Token);
+                        cancellationToken: _cts.Token,
+                        flowRatePercent: flowRate);
 
                     if (!resultPath.Success)
                     {
@@ -1070,7 +1076,7 @@ namespace PrinterGUI.ViewModels
             sb.AppendLine("G90 \t\t; use absolute coordinates");
             sb.AppendLine("M82 \t\t; use absolute distances for extrusion");
             if (extrusionTemp > 0)
-                sb.AppendLine($"M109 S{extrusionTemp} ; set extruder temp and wait");
+                sb.AppendLine($"M109 S{extrusionTemp} ; set extrusion temp and wait");
             sb.AppendLine("G92 E0");
             sb.AppendLine();
             sb.AppendLine("; layer change");
@@ -1300,14 +1306,16 @@ namespace PrinterGUI.ViewModels
 
         private void HandleDryingTemperatureMessage(string msg)
         {
+            if (string.IsNullOrWhiteSpace(msg))
+                return;
+
+            // Track drying phase start/stop from sent commands
             if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase) ||
-                msg.StartsWith("> G4 ", StringComparison.OrdinalIgnoreCase))
+                msg.StartsWith("> G4 ", StringComparison.OrdinalIgnoreCase) ||
+                msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
             {
                 _isDryingPhase = true;
             }
-
-            // Let the polling task handle temperature updates
-            // This method can be simplified or focus on phase detection only
 
             if (msg.StartsWith("> M155 S0", StringComparison.OrdinalIgnoreCase) ||
                 msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase) ||
@@ -1315,9 +1323,30 @@ namespace PrinterGUI.ViewModels
             {
                 _isDryingPhase = false;
             }
-            else if (msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
+
+            // During print, use incoming printer responses (not sent-command echo lines)
+            // to keep oven temp live even while polling is paused/disabled.
+            if (!msg.StartsWith(">", StringComparison.Ordinal))
             {
-                _isDryingPhase = true;
+                var now = DateTime.UtcNow;
+
+                if (TryExtractOvenTemperatureC(msg, out var ovenTemp))
+                {
+                    if ((now - _lastOvenTempUpdateUtc).TotalMilliseconds >= 500)
+                    {
+                        OvenTemperatureC = ovenTemp.ToString("0.0", CultureInfo.InvariantCulture);
+                        _lastOvenTempUpdateUtc = now;
+                    }
+                }
+
+                if (TryExtractTempAfterToken(msg, "T:", out var extruderTemp))
+                {
+                    if ((now - _lastExtruderTempUpdateUtc).TotalMilliseconds >= 500)
+                    {
+                        ExtruderTemperatureC = extruderTemp.ToString("0.0", CultureInfo.InvariantCulture);
+                        _lastExtruderTempUpdateUtc = now;
+                    }
+                }
             }
         }
 

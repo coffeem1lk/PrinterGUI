@@ -37,6 +37,7 @@ namespace PrinterGUI.Views
                 this.FindControl<TextBox>("DryingTimeTextBox"),
                 this.FindControl<TextBox>("PrintSpeedTextBox"),
                 this.FindControl<TextBox>("DryingTimeRTTextBox"),
+                this.FindControl<TextBox>("FlowRateTextBox"),
                 this.FindControl<TextBox>("OdfWidthTextBox"),
                 this.FindControl<TextBox>("OdfLengthTextBox"),
                 this.FindControl<TextBox>("OdfFilmCountTextBox"),
@@ -46,6 +47,7 @@ namespace PrinterGUI.Views
                 this.FindControl<TextBox>("WaitBetweenGummiesTextBox"),
                 this.FindControl<TextBox>("ExtrusionSpeedTextBox"),
                 this.FindControl<TextBox>("MmPerMlTextBox"),
+                this.FindControl<TextBox>("FlowRateTextBox"),
             };
 
             foreach (var tb in textboxesToBind.Where(t => t != null))

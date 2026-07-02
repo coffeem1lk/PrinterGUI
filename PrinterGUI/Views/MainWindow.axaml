@@ -27,7 +27,7 @@
     <Border Grid.Row="1" Padding="8">
       <Grid>
         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="0.77*"/>
+          <ColumnDefinition Width="0.385*"/>
           <ColumnDefinition Width="1.5*"/>
         </Grid.ColumnDefinitions>
 
@@ -61,13 +61,13 @@
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
-            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="-180,0,0,6">
               <TextBlock Text="Drying Temp (&#176;C)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="DryingTempTextBox" Text="{Binding DryingTemp}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
 
               <!-- NEW: live oven temp -->
-              <TextBlock Text="  Oven:" VerticalAlignment="Center" Margin="10,0,4,0"/>
+              <TextBlock Text="  Oven:" VerticalAlignment="Center" Margin="12,0,4,0"/>
               <TextBlock Text="{Binding OvenTemperatureC}" VerticalAlignment="Center" FontWeight="Bold"/>
               <TextBlock Text=" &#176;C" VerticalAlignment="Center"/>
             </StackPanel>
@@ -78,7 +78,7 @@
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
-            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
+            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="-180,0,0,6">
               <TextBlock Text="Drying Time (min)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="DryingTimeTextBox" Text="{Binding DryingTime}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
@@ -90,9 +90,13 @@
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
-            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="-100,0,0,6">
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="-180,0,0,6">
               <TextBlock Text="Drying Time RT (min)" Width="132" VerticalAlignment="Center"/>
               <TextBox x:Name="DryingTimeRTTextBox" Text="{Binding DryingTimeRT}" Width="60"
+                       GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+
+              <TextBlock Text="FR (%)" Width="56" VerticalAlignment="Center" Margin="20,0,4,0"/>
+              <TextBox x:Name="FlowRateTextBox" Text="{Binding FlowRatePercent}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
             </StackPanel>
 
