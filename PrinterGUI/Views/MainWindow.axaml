@@ -269,9 +269,12 @@
 
           <TextBlock Text="{Binding Status}" Foreground="Gray" TextWrapping="Wrap" Margin="4" Height="60"/>
 
-<TextBlock Text="{Binding DryingStartedAtText, StringFormat='Drying started at: {0}'}"
-           Foreground="Gray"
-           Margin="4,0,4,0"/>
+          <StackPanel Orientation="Horizontal" Margin="4,0,4,0">
+            <TextBlock Text="Drying started at: " Foreground="Gray" />
+            <TextBlock Text="{Binding DryingStartedAtText}" Foreground="Gray" />
+            <TextBlock Text=" / time remaining: " Foreground="Gray" Margin="8,0,0,0"/>
+            <TextBlock Text="{Binding DryingTimeRemainingText}" Foreground="Gray" />
+          </StackPanel>
 
           <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="14" Margin="4,6,4,0"/>
         </StackPanel>

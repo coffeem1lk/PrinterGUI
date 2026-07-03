@@ -342,6 +342,7 @@ namespace PrinterGUI.ViewModels
                 _isDryingPhase = false;
                 _dryingStartedAtUtc = null;
                 DryingStartedAtText = "--";
+                DryingTimeRemainingText = "-- min";
 
                 _lastOvenTempUpdateUtc = DateTime.MinValue;
                 OvenTemperatureC = "--";
@@ -605,6 +606,7 @@ namespace PrinterGUI.ViewModels
                 _isDryingPhase = false;
                 _dryingStartedAtUtc = null;
                 DryingStartedAtText = "--";
+                StopDryingCountdown();
                 _lastOvenTempUpdateUtc = DateTime.MinValue;
                 OvenTemperatureC = "--";
 
@@ -1319,23 +1321,51 @@ namespace PrinterGUI.ViewModels
                 return;
 
             // Track drying phase start/stop from sent commands
-            if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase))
+            if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase) ||
+                msg.StartsWith("> G4 ", StringComparison.OrdinalIgnoreCase) ||
+                msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
             {
                 _isDryingPhase = true;
-
-                if (_dryingStartedAtUtc == null)
-                {
-                    _dryingStartedAtUtc = DateTime.UtcNow;
-                    DryingStartedAtText = _dryingStartedAtUtc.Value.ToLocalTime().ToString("HH:mm:ss");
-                }
             }
 
-            // keep your existing stop conditions, and also clear if you want:
             if (msg.StartsWith("> M155 S0", StringComparison.OrdinalIgnoreCase) ||
                 msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase) ||
                 msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
             {
                 _isDryingPhase = false;
+                // stop countdown when drying stops
+                _dryingStartedAtUtc = null;
+                DryingStartedAtText = "--";
+                StopDryingCountdown();
+            }
+
+            // When we see the M141 start command, record start time and start countdown (include RT)
+            if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_dryingStartedAtUtc == null)
+                {
+                    _dryingStartedAtUtc = DateTime.UtcNow;
+                    DryingStartedAtText = _dryingStartedAtUtc.Value.ToLocalTime().ToString("HH:mm:ss");
+
+                    // compute total duration = drying time + drying RT (minutes)
+                    int mainMinutes = 0, rtMinutes = 0;
+                    if (IsGummies)
+                    {
+                        int.TryParse(GummiesDryingTime, NumberStyles.Integer, CultureInfo.InvariantCulture, out mainMinutes);
+                        int.TryParse(GummiesDryingTimeRT, NumberStyles.Integer, CultureInfo.InvariantCulture, out rtMinutes);
+                    }
+                    else if (IsOdf)
+                    {
+                        int.TryParse(DryingTime, NumberStyles.Integer, CultureInfo.InvariantCulture, out mainMinutes);
+                        int.TryParse(DryingTimeRT, NumberStyles.Integer, CultureInfo.InvariantCulture, out rtMinutes);
+                    }
+
+                    var totalMin = Math.Max(0, mainMinutes) + Math.Max(0, rtMinutes);
+                    if (totalMin > 0)
+                        StartDryingCountdown(TimeSpan.FromMinutes(totalMin));
+                    else
+                        DryingTimeRemainingText = "--:--";
+                }
             }
 
             // During print, use incoming printer responses (not sent-command echo lines)
@@ -1397,6 +1427,63 @@ namespace PrinterGUI.ViewModels
         {
             get => _dryingStartedAtText;
             set { _dryingStartedAtText = value; Notify(nameof(DryingStartedAtText)); }
+        }
+
+        // Add these members near other fields (class-level)
+        // Add near other fields (class-level)
+        TimeSpan? _dryingDuration;
+        System.Threading.Timer? _dryingCountdownTimer;
+        readonly object _dryingTimerLock = new object();
+
+        string _dryingTimeRemainingText = "--:--";
+        public string DryingTimeRemainingText
+        {
+            get => _dryingTimeRemainingText;
+            set { _dryingTimeRemainingText = value; Notify(nameof(DryingTimeRemainingText)); }
+        }
+
+        void StartDryingCountdown(TimeSpan duration)
+        {
+            lock (_dryingTimerLock)
+            {
+                _dryingDuration = duration;
+                try { _dryingCountdownTimer?.Dispose(); } catch { }
+                // immediate first tick then every 1s
+                _dryingCountdownTimer = new System.Threading.Timer(_ => UpdateDryingRemaining(), null, 0, 1000);
+            }
+        }
+
+        void StopDryingCountdown()
+        {
+            lock (_dryingTimerLock)
+            {
+                try { _dryingCountdownTimer?.Dispose(); } catch { }
+                _dryingCountdownTimer = null;
+                _dryingDuration = null;
+                _uiContext?.Post(_ => DryingTimeRemainingText = "--:--", null);
+            }
+        }
+
+        void UpdateDryingRemaining()
+        {
+            var started = _dryingStartedAtUtc;
+            var duration = _dryingDuration;
+            if (started == null || duration == null)
+            {
+                _uiContext?.Post(_ => DryingTimeRemainingText = "--:--", null);
+                return;
+            }
+
+            var remaining = duration.Value - (DateTime.UtcNow - started.Value);
+            if (remaining <= TimeSpan.Zero)
+            {
+                _uiContext?.Post(_ => DryingTimeRemainingText = "0:00", null);
+                StopDryingCountdown();
+                return;
+            }
+
+            var text = $"{(int)remaining.TotalMinutes}:{remaining.Seconds:00}";
+            _uiContext?.Post(_ => DryingTimeRemainingText = text, null);
         }
     }
 }
