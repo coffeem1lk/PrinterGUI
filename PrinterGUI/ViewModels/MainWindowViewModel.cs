@@ -340,6 +340,9 @@ namespace PrinterGUI.ViewModels
             if (IsOdf || IsGummies)
             {
                 _isDryingPhase = false;
+                _dryingStartedAtUtc = null;
+                DryingStartedAtText = "--";
+
                 _lastOvenTempUpdateUtc = DateTime.MinValue;
                 OvenTemperatureC = "--";
             }
@@ -598,6 +601,12 @@ namespace PrinterGUI.ViewModels
                 _cts?.Dispose();
                 _cts = null;
                 _sharedPort.Resume();
+
+                _isDryingPhase = false;
+                _dryingStartedAtUtc = null;
+                DryingStartedAtText = "--";
+                _lastOvenTempUpdateUtc = DateTime.MinValue;
+                OvenTemperatureC = "--";
 
                 try { File.Delete(tempPath); } catch { }
 
@@ -1310,13 +1319,18 @@ namespace PrinterGUI.ViewModels
                 return;
 
             // Track drying phase start/stop from sent commands
-            if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase) ||
-                msg.StartsWith("> G4 ", StringComparison.OrdinalIgnoreCase) ||
-                msg.StartsWith("> M155 S", StringComparison.OrdinalIgnoreCase))
+            if (msg.StartsWith("> M141", StringComparison.OrdinalIgnoreCase))
             {
                 _isDryingPhase = true;
+
+                if (_dryingStartedAtUtc == null)
+                {
+                    _dryingStartedAtUtc = DateTime.UtcNow;
+                    DryingStartedAtText = _dryingStartedAtUtc.Value.ToLocalTime().ToString("HH:mm:ss");
+                }
             }
 
+            // keep your existing stop conditions, and also clear if you want:
             if (msg.StartsWith("> M155 S0", StringComparison.OrdinalIgnoreCase) ||
                 msg.StartsWith("> M141 S0", StringComparison.OrdinalIgnoreCase) ||
                 msg.StartsWith("> M84", StringComparison.OrdinalIgnoreCase))
@@ -1375,6 +1389,14 @@ namespace PrinterGUI.ViewModels
                     System.Diagnostics.Debug.WriteLine($"Error polling temperatures: {ex.Message}");
                 }
             }
+        }
+
+        DateTime? _dryingStartedAtUtc;
+        string _dryingStartedAtText = "--";
+        public string DryingStartedAtText
+        {
+            get => _dryingStartedAtText;
+            set { _dryingStartedAtText = value; Notify(nameof(DryingStartedAtText)); }
         }
     }
 }
