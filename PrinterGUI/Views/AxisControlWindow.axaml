@@ -46,6 +46,8 @@
             <Button Grid.Row="4" Grid.Column="0" Content="Z -10" Command="{Binding MoveZCommand}" CommandParameter="-10" Margin="1" Width="63" Height="43"/>
             <Button Grid.Row="4" Grid.Column="2" Content="E0 +10" Command="{Binding MoveE0Command}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
             <Button Grid.Row="4" Grid.Column="4" Content="E1 +10" Command="{Binding MoveE1Command}" CommandParameter="10" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="0" Grid.Column="4" Content="open" Command="{Binding MoveE1Command}" CommandParameter="-17" Margin="1" Width="63" Height="43"/>
+            <Button Grid.Row="4" Grid.Column="4" Content="close" Command="{Binding MoveE1Command}" CommandParameter="17" Margin="1" Width="63" Height="43"/>
           </Grid>
 
           <!-- Temp control -->

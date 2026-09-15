@@ -50,6 +50,7 @@ namespace PrinterGUI.ViewModels
 
         public bool CanSaveToEeprom => CanAdjust && HasUnsavedChanges;
 
+        double _homeZPosition = 0.0;
         double _currentZPosition = 0.0;
         const double BaseOffset = -4.0;
 
@@ -91,7 +92,12 @@ namespace PrinterGUI.ViewModels
             if (!string.IsNullOrEmpty(response))
             {
                 var positionResponse = await SendGcodeAsync("M114");
-                _currentZPosition = ParseZPosition(positionResponse);
+
+                // Store the homed Z as the reference point
+                _homeZPosition = ParseZPosition(positionResponse);
+
+                // Movement after homing is tracked separately
+                _currentZPosition = 0.0;
 
                 CanAdjust = true;
                 UpdateCalculatedOffset();
@@ -124,7 +130,7 @@ namespace PrinterGUI.ViewModels
             if (!CanSaveToEeprom)
                 return;
 
-            double finalOffset = BaseOffset + _currentZPosition;
+            double finalOffset = BaseOffset + _homeZPosition + _currentZPosition;
 
             Status = string.Empty;
 
@@ -159,7 +165,7 @@ namespace PrinterGUI.ViewModels
 
         void UpdateCalculatedOffset()
         {
-            double calculatedOffset = BaseOffset + _currentZPosition;
+            double calculatedOffset = BaseOffset + _homeZPosition + _currentZPosition;
             CurrentZOffset = $"{calculatedOffset:F2} mm";
         }
 
