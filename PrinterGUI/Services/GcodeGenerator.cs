@@ -94,11 +94,12 @@ namespace PrinterGUI.Services
             args.Append("--perimeter-speed ").Append(printSpeed.ToString(CultureInfo.InvariantCulture)).Append(' ');
             args.Append("--external-perimeter-speed ").Append(printSpeed.ToString(CultureInfo.InvariantCulture)).Append(' ');
 
-            // for compatibility with older profiles, translate flowRatePercent to the equivalent volumetric setting
+            // Pass the UI flow value as FR_percent only.
+            // filament_diameter must come from config.ini.
             if (flowRatePercent.HasValue)
             {
-                var flowRate = Math.Max(0.1, Math.Min(5.0, flowRatePercent.Value / 100.0)); // clamp to sensible range
-                args.Append("--filament-diameter ").Append(flowRate.ToString("F2", CultureInfo.InvariantCulture)).Append(' ');
+                var frPercent = Math.Max(0, Math.Min(200, flowRatePercent.Value)); // clamp as needed
+                args.Append("--FR_percent ").Append(frPercent.ToString(CultureInfo.InvariantCulture)).Append(' ');
             }
 
             // append any extra args the caller wants
