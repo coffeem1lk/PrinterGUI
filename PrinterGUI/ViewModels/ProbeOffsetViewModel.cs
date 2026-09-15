@@ -1,10 +1,10 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO.Ports;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using PrinterGUI.Services;
 
 namespace PrinterGUI.ViewModels
 {
@@ -13,7 +13,7 @@ namespace PrinterGUI.ViewModels
         public event PropertyChangedEventHandler? PropertyChanged;
         void Notify(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        readonly string _serialPort;
+        readonly SharedSerialPortService _sharedPort;
 
         string _status = string.Empty;
         public string Status { get => _status; set { _status = value; Notify(nameof(Status)); } }
@@ -25,42 +25,42 @@ namespace PrinterGUI.ViewModels
         public bool CanHome { get => _canHome; set { _canHome = value; Notify(nameof(CanHome)); } }
 
         bool _canAdjust = false;
-        public bool CanAdjust 
-        { 
-            get => _canAdjust; 
-            set 
-            { 
-                _canAdjust = value; 
+        public bool CanAdjust
+        {
+            get => _canAdjust;
+            set
+            {
+                _canAdjust = value;
                 Notify(nameof(CanAdjust));
                 Notify(nameof(CanSaveToEeprom));
-            } 
+            }
         }
 
         bool _hasUnsavedChanges = false;
-        public bool HasUnsavedChanges 
-        { 
-            get => _hasUnsavedChanges; 
-            set 
-            { 
-                _hasUnsavedChanges = value; 
+        public bool HasUnsavedChanges
+        {
+            get => _hasUnsavedChanges;
+            set
+            {
+                _hasUnsavedChanges = value;
                 Notify(nameof(HasUnsavedChanges));
                 Notify(nameof(CanSaveToEeprom));
-            } 
+            }
         }
 
         public bool CanSaveToEeprom => CanAdjust && HasUnsavedChanges;
 
-        double _currentZPosition = 0.0; // Track cumulative Z position changes
-        const double BaseOffset = -4.0; // The initial offset we start with
+        double _currentZPosition = 0.0;
+        const double BaseOffset = -4.0;
 
         public ICommand ResetOffsetCommand { get; }
         public ICommand HomeCommand { get; }
         public ICommand AdjustZCommand { get; }
         public ICommand SaveToEepromCommand { get; }
 
-        public ProbeOffsetViewModel(string serialPort = "/dev/ttyACM0")
+        public ProbeOffsetViewModel(SharedSerialPortService sharedPort)
         {
-            _serialPort = serialPort;
+            _sharedPort = sharedPort;
             ResetOffsetCommand = new RelayCommand(async _ => await ResetOffsetAsync());
             HomeCommand = new RelayCommand(async _ => await HomeAsync());
             AdjustZCommand = new RelayCommand(async p => await AdjustZAsync(p));
@@ -70,6 +70,7 @@ namespace PrinterGUI.ViewModels
         async Task ResetOffsetAsync()
         {
             Status = string.Empty;
+
             var response = await SendGcodeAsync("M851 Z-4");
 
             if (!string.IsNullOrEmpty(response))
@@ -89,7 +90,6 @@ namespace PrinterGUI.ViewModels
 
             if (!string.IsNullOrEmpty(response))
             {
-                // Query current Z position after homing
                 var positionResponse = await SendGcodeAsync("M114");
                 _currentZPosition = ParseZPosition(positionResponse);
 
@@ -102,17 +102,6 @@ namespace PrinterGUI.ViewModels
             }
         }
 
-        double ParseZPosition(string response)
-        {
-            // Parse M114 response: "X:0.00 Y:0.00 Z:150.00 E:0.00"
-            var match = Regex.Match(response, @"Z:(-?\d+\.?\d*)", RegexOptions.IgnoreCase);
-            if (match.Success && double.TryParse(match.Groups[1].Value, out var z))
-            {
-                return z;
-            }
-            return 0.0; // Fallback if parsing fails
-        }
-
         async Task AdjustZAsync(object? adjustmentObj)
         {
             if (adjustmentObj is not string adjustStr || !double.TryParse(adjustStr, out var adjustment))
@@ -120,9 +109,7 @@ namespace PrinterGUI.ViewModels
 
             Status = string.Empty;
 
-            // Move Z axis physically
-            var moveCmd = $"G91\nG1 Z{adjustment:F2} F400\nG90";
-            var response = await SendGcodeAsync(moveCmd);
+            var response = await SendGcodeAsync($"G91\nG1 Z{adjustment:F2} F400\nG90");
 
             if (!string.IsNullOrEmpty(response))
             {
@@ -132,32 +119,21 @@ namespace PrinterGUI.ViewModels
             }
         }
 
-        void UpdateCalculatedOffset()
-        {
-            // Calculate new offset: base offset (-4) + current Z position
-            double calculatedOffset = BaseOffset + _currentZPosition;
-            CurrentZOffset = $"{calculatedOffset:F2} mm";
-        }
-
         async Task SaveToEepromAsync()
         {
             if (!CanSaveToEeprom)
                 return;
 
-            // Calculate final offset
             double finalOffset = BaseOffset + _currentZPosition;
 
             Status = string.Empty;
-            
-            // Set the calculated offset
-            var setOffsetCmd = $"M851 Z{finalOffset:F2}";
-            var response = await SendGcodeAsync(setOffsetCmd);
+
+            var response = await SendGcodeAsync($"M851 Z{finalOffset:F2}");
 
             if (!string.IsNullOrEmpty(response))
             {
-                // Save to EEPROM
                 var saveResponse = await SendGcodeAsync("M500");
-                
+
                 if (!string.IsNullOrEmpty(saveResponse))
                 {
                     HasUnsavedChanges = false;
@@ -168,63 +144,23 @@ namespace PrinterGUI.ViewModels
 
         async Task<string> SendGcodeAsync(string gcode, int timeoutSeconds = 5)
         {
-            try
-            {
-                using var port = new SerialPort(_serialPort, 115200)
-                {
-                    NewLine = "\n",
-                    ReadTimeout = 1000,
-                    WriteTimeout = 2000,
-                    DtrEnable = true,
-                    RtsEnable = true
-                };
+            var response = await _sharedPort.SendCommandAsync(gcode, timeoutSeconds * 1000);
+            return response ?? string.Empty;
+        }
 
-                port.Open();
-                await Task.Delay(500);
+        double ParseZPosition(string response)
+        {
+            var match = Regex.Match(response, @"Z:(-?\d+\.?\d*)", RegexOptions.IgnoreCase);
+            if (match.Success && double.TryParse(match.Groups[1].Value, out var z))
+                return z;
 
-                // Handle multi-line commands
-                foreach (var line in gcode.Split('\n'))
-                {
-                    if (string.IsNullOrWhiteSpace(line)) continue;
-                    port.WriteLine(line.Trim());
-                    await Task.Delay(50);
-                }
+            return 0.0;
+        }
 
-                var responseBuilder = new System.Text.StringBuilder();
-                var startTime = DateTime.Now;
-                var maxWait = TimeSpan.FromSeconds(timeoutSeconds);
-                bool gotOk = false;
-
-                while ((DateTime.Now - startTime) < maxWait)
-                {
-                    if (port.BytesToRead > 0)
-                    {
-                        var line = port.ReadLine().Trim();
-                        Debug.WriteLine(line);
-                        if (!string.IsNullOrEmpty(line))
-                        {
-                            responseBuilder.AppendLine(line);
-                            if (line.StartsWith("ok", StringComparison.OrdinalIgnoreCase))
-                            {
-                                gotOk = true;
-                                break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        await Task.Delay(50);
-                    }
-                }
-
-                port.Close();
-                return gotOk ? responseBuilder.ToString().Trim() : string.Empty;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Serial error: {ex.Message}");
-                return string.Empty;
-            }
+        void UpdateCalculatedOffset()
+        {
+            double calculatedOffset = BaseOffset + _currentZPosition;
+            CurrentZOffset = $"{calculatedOffset:F2} mm";
         }
 
         class RelayCommand : ICommand

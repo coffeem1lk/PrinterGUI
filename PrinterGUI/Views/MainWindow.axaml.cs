@@ -147,7 +147,7 @@ namespace PrinterGUI.Views
         {
             if (DataContext is MainWindowViewModel vm)
             {
-                var probeWindow = new ProbeOffsetWindow(vm.SerialPortPath);
+                var probeWindow = new ProbeOffsetWindow(vm.GetSharedPort());
                 probeWindow.Show();
             }
         }
