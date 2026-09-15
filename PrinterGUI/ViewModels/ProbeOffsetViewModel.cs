@@ -92,12 +92,7 @@ namespace PrinterGUI.ViewModels
             if (!string.IsNullOrEmpty(response))
             {
                 var positionResponse = await SendGcodeAsync("M114");
-
-                // Store the homed Z as the reference point
-                _homeZPosition = ParseZPosition(positionResponse);
-
-                // Movement after homing is tracked separately
-                _currentZPosition = 0.0;
+                _currentZPosition = ParseZPosition(positionResponse);
 
                 CanAdjust = true;
                 UpdateCalculatedOffset();
@@ -119,7 +114,9 @@ namespace PrinterGUI.ViewModels
 
             if (!string.IsNullOrEmpty(response))
             {
-                _currentZPosition += adjustment;
+                var positionResponse = await SendGcodeAsync("M114");
+                _currentZPosition = ParseZPosition(positionResponse);
+
                 HasUnsavedChanges = true;
                 UpdateCalculatedOffset();
             }
