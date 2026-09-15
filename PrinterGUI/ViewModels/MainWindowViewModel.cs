@@ -945,11 +945,11 @@ namespace PrinterGUI.ViewModels
         }
 
         private static bool TryBuildOdfFilmOrigins(
-            double widthMm,
-            double lengthMm,
-            int filmCount,
-            out List<(double x, double y)> origins,
-            out string error)
+        double widthMm,
+        double lengthMm,
+        int filmCount,
+        out List<(double x, double y)> origins,
+        out string error)
         {
             origins = new List<(double x, double y)>(filmCount);
             error = string.Empty;
@@ -960,29 +960,18 @@ namespace PrinterGUI.ViewModels
                 return false;
             }
 
-            // 1st film: top-left corner
-            var firstY = OdfBedYMaxMm - lengthMm;
-            if (firstY < 0)
+            // Fill a fixed 6x4 grid from (0,0), left-to-right, then bottom-to-top.
+            for (int i = 0; i < filmCount; i++)
             {
-                error = $"Film length ({lengthMm} mm) exceeds bed Y ({OdfBedYMaxMm} mm).";
-                return false;
-            }
-            origins.Add((0.0, firstY));
+                int col = i % OdfGridColumns;
+                int row = i / OdfGridColumns;
 
-            if (filmCount >= 2)
-            {
-                // 2nd film: bottom-left corner
-                origins.Add((0.0, 0.0));
+                var x = col * (widthMm + OdfGapMm);
+                var y = row * (lengthMm + OdfGapMm);
+
+                origins.Add((x, y));
             }
 
-            // 3rd+ films: same Y as second, moving +X with 10 mm spacing
-            for (int i = 3; i <= filmCount; i++)
-            {
-                var x = (i - 2) * (widthMm + OdfGapMm);
-                origins.Add((x, 0.0));
-            }
-
-            // bounds check
             foreach (var (x, y) in origins)
             {
                 if (x < 0 || y < 0 || (x + widthMm) > OdfBedXMaxMm || (y + lengthMm) > OdfBedYMaxMm)
@@ -1152,7 +1141,9 @@ namespace PrinterGUI.ViewModels
         private const double OdfBedXMaxMm = 261.0;
         private const double OdfBedYMaxMm = 132.0; // if your Y max is really 261, set this to 261.0
         private const double OdfGapMm = 10.0;
-        private const int OdfMaxFilms = 12;
+        private const int OdfGridColumns = 6;
+        private const int OdfGridRows = 4;
+        private const int OdfMaxFilms = OdfGridColumns * OdfGridRows;
         private const string GummiesPointsJsonPath = "/home/raspberrypie/json/gummies_points.json";
 
         private sealed class GummiesPointsConfig
