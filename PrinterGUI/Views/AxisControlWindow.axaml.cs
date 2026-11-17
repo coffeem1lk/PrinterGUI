@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using PrinterGUI.ViewModels;
+using PrinterGUI.Models;
 using PrinterGUI.Services;
 
 namespace PrinterGUI.Views
@@ -18,9 +19,9 @@ namespace PrinterGUI.Views
             InitializeComponent();
         }
 
-        public AxisControlWindow(SharedSerialPortService sharedPort) : this()
+        public AxisControlWindow(SharedSerialPortService sharedPort, PrinterProfile printerProfile) : this()
         {
-            DataContext = new AxisControlViewModel(sharedPort);
+            DataContext = new AxisControlViewModel(sharedPort, printerProfile);
 
             if (GcodeKeyboard != null)
             {

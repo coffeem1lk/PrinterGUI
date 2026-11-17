@@ -138,7 +138,7 @@ namespace PrinterGUI.Views
         {
             if (DataContext is MainWindowViewModel vm)
             {
-                var axisWindow = new AxisControlWindow(vm.GetSharedPort());
+                var axisWindow = new AxisControlWindow(vm.GetSharedPort(), vm.GetPrinterProfile());
                 axisWindow.Show();
             }
         }
@@ -147,7 +147,7 @@ namespace PrinterGUI.Views
         {
             if (DataContext is MainWindowViewModel vm)
             {
-                var probeWindow = new ProbeOffsetWindow(vm.GetSharedPort());
+                var probeWindow = new ProbeOffsetWindow(vm.GetSharedPort(), vm.GetPrinterProfile());
                 probeWindow.Show();
             }
         }

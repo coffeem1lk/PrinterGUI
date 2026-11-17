@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using PrinterGUI.Models;
 using PrinterGUI.Services;
 
 namespace PrinterGUI.ViewModels
@@ -14,6 +15,7 @@ namespace PrinterGUI.ViewModels
         void Notify(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         readonly SharedSerialPortService _sharedPort;
+        readonly PrinterProfile _printerProfile;
 
         string _status = string.Empty;
         public string Status { get => _status; set { _status = value; Notify(nameof(Status)); } }
@@ -59,9 +61,10 @@ namespace PrinterGUI.ViewModels
         public ICommand AdjustZCommand { get; }
         public ICommand SaveToEepromCommand { get; }
 
-        public ProbeOffsetViewModel(SharedSerialPortService sharedPort)
+        public ProbeOffsetViewModel(SharedSerialPortService sharedPort, PrinterProfile printerProfile)
         {
             _sharedPort = sharedPort;
+            _printerProfile = printerProfile;
             ResetOffsetCommand = new RelayCommand(async _ => await ResetOffsetAsync());
             HomeCommand = new RelayCommand(async _ => await HomeAsync());
             AdjustZCommand = new RelayCommand(async p => await AdjustZAsync(p));
@@ -87,7 +90,10 @@ namespace PrinterGUI.ViewModels
         {
             Status = string.Empty;
 
-            var response = await SendGcodeAsync("T1\nG1 E-17 F800\nG28", timeoutSeconds: 30);
+            var doorTravel = _printerProfile.DoorTravelMm.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+            var response = _printerProfile.SafeHomingEnabled && _printerProfile.RequiresDoorOpenBeforeHoming
+                ? await SendGcodeAsync($"T1\nG1 E-{doorTravel} F800\nG28", timeoutSeconds: 30)
+                : await SendGcodeAsync("G28", timeoutSeconds: 30);
 
             if (!string.IsNullOrEmpty(response))
             {

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using PrinterGUI.Models;
 using PrinterGUI.Services;
 using PrinterGUI.ViewModels;
 
@@ -17,9 +18,9 @@ namespace PrinterGUI.Views
             InitializeComponent();
         }
 
-        public ProbeOffsetWindow(SharedSerialPortService sharedPort) : this()
+        public ProbeOffsetWindow(SharedSerialPortService sharedPort, PrinterProfile printerProfile) : this()
         {
-            DataContext = new ProbeOffsetViewModel(sharedPort);
+            DataContext = new ProbeOffsetViewModel(sharedPort, printerProfile);
         }
 
         private void Close_Click(object? sender, RoutedEventArgs e)

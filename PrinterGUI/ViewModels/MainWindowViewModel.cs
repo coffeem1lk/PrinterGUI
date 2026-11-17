@@ -130,6 +130,7 @@ namespace PrinterGUI.ViewModels
 
         readonly SerialPrinterService _serial = new SerialPrinterService();
         readonly SharedSerialPortService _sharedPort;
+        readonly PrinterProfile _printerProfile;
 
         CancellationTokenSource? _cts;
 
@@ -141,6 +142,7 @@ namespace PrinterGUI.ViewModels
         public MainWindowViewModel()
         {
             _uiContext = SynchronizationContext.Current;
+            _printerProfile = PrinterProfileLoader.Load();
             _sharedPort = new SharedSerialPortService(SerialPortPath);
 
             LoadModels();
@@ -456,7 +458,7 @@ namespace PrinterGUI.ViewModels
                         points.AddRange(blisterPoints);
                     }
 
-                    var gummiesGcode = BuildGummiesGcode(extrusionAmount, waitSeconds, extrusionSpeedPercent, gummiesExtrusionTemp, gummiesDryingTemp, gummiesDryingTime, gummiesDryingTimeRT, double.Parse(GummiesMmPerMl, CultureInfo.InvariantCulture), points);
+                    var gummiesGcode = BuildGummiesGcode(extrusionAmount, waitSeconds, extrusionSpeedPercent, gummiesExtrusionTemp, gummiesDryingTemp, gummiesDryingTime, gummiesDryingTimeRT, double.Parse(GummiesMmPerMl, CultureInfo.InvariantCulture), points, _printerProfile);
                     await File.WriteAllTextAsync(tempPath, gummiesGcode, _cts.Token);
 
                     try
@@ -634,6 +636,7 @@ namespace PrinterGUI.ViewModels
         }
 
         public SharedSerialPortService GetSharedPort() => _sharedPort;
+        public PrinterProfile GetPrinterProfile() => _printerProfile;
 
         async Task DeleteOldGeneratedFilesAsync(string stlPath)
         {
@@ -1053,20 +1056,25 @@ namespace PrinterGUI.ViewModels
             int dryingTimeMinutes,
             int dryingTimeRTMinutes,
             double gummiesMmPerMl,
-            IReadOnlyList<(double X, double Y)> points)
+            IReadOnlyList<(double X, double Y)> points,
+            PrinterProfile printerProfile)
         {
             var ci = CultureInfo.InvariantCulture;
             var sb = new System.Text.StringBuilder();
+            var doorTravel = printerProfile.DoorTravelMm.ToString("0.###", ci);
 
             // Set probe offset based on mm/ml selection
             string m851Command = Math.Abs(gummiesMmPerMl - 5.0) < 0.001 ? "M851 Y-28" : "M851 Y-36";
             sb.AppendLine(m851Command);
             sb.AppendLine();
 
-            sb.AppendLine("T1\t\t; select E1 (oven door)");
-            sb.AppendLine("G92 E0");
-            sb.AppendLine("G1 E-17 F1000\t; open oven door");
-            sb.AppendLine("T0\t\t; select E0 (extruder)");
+            if (printerProfile.SafeHomingEnabled && printerProfile.RequiresDoorOpenBeforeHoming)
+            {
+                sb.AppendLine("T1\t\t; select E1 (oven door)");
+                sb.AppendLine("G92 E0");
+                sb.AppendLine($"G1 E-{doorTravel} F1000\t; open oven door");
+                sb.AppendLine("T0\t\t; select E0 (extruder)");
+            }
             sb.AppendLine("G28\t\t; home all axes");
             sb.AppendLine();
             sb.AppendLine("; Filament gcode");
@@ -1113,7 +1121,7 @@ namespace PrinterGUI.ViewModels
                 sb.AppendLine("G28 X0 ; home X");
                 sb.AppendLine("G1 Y330 F4000 ; insert plate in oven");
                 sb.AppendLine("G92 E0");
-                sb.AppendLine("G1 E17 F800 ; close oven door");
+                sb.AppendLine($"G1 E{doorTravel} F800 ; close oven door");
                 sb.AppendLine("M84 ; disable motors");
                 sb.AppendLine("M106 S255 ; activate fan");
                 sb.AppendLine("M155 S2 ; start temperature auto-report every 2s");
@@ -1123,7 +1131,7 @@ namespace PrinterGUI.ViewModels
                 sb.AppendLine("M155 S0 ; stop temperature auto-report");
                 sb.AppendLine("M17 Y E ; enable motors Y E1");
                 sb.AppendLine("G92 E0");
-                sb.AppendLine("G1 E-17 F800 ; open oven door");
+                sb.AppendLine($"G1 E-{doorTravel} F800 ; open oven door");
                 sb.AppendLine($"G4 S{dryingTimeRTMinutes * 60} ; wait in oven with ventilation, no heating");
                 sb.AppendLine("G28 Y0 ; home Y");
                 sb.AppendLine("G1 E0");
@@ -1131,7 +1139,7 @@ namespace PrinterGUI.ViewModels
 
             sb.AppendLine("T1 ; select oven door");
             sb.AppendLine("G92 E0");
-            sb.AppendLine("G1 E17 F800 ; close oven door");
+            sb.AppendLine($"G1 E{doorTravel} F800 ; close oven door");
             sb.AppendLine("G28 X0 Y0");
             sb.AppendLine("M84 ; disable motors");
 

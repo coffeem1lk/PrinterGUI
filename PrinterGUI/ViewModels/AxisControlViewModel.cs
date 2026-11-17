@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using PrinterGUI.Models;
 using PrinterGUI.Services;
 
 namespace PrinterGUI.ViewModels
@@ -15,6 +16,7 @@ namespace PrinterGUI.ViewModels
         void Notify(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         readonly SharedSerialPortService _sharedPort;
+        readonly PrinterProfile _printerProfile;
         CancellationTokenSource? _tempReadingCts;
 
         string _status = "Ready";
@@ -51,9 +53,13 @@ namespace PrinterGUI.ViewModels
         public ICommand StartTempControlCommand { get; }
         public ICommand StopTempControlCommand { get; }
 
-        public AxisControlViewModel(SharedSerialPortService sharedPort)
+        public string DoorOpenDistance => (-_printerProfile.DoorTravelMm).ToString("0.###", CultureInfo.InvariantCulture);
+        public string DoorCloseDistance => _printerProfile.DoorTravelMm.ToString("0.###", CultureInfo.InvariantCulture);
+
+        public AxisControlViewModel(SharedSerialPortService sharedPort, PrinterProfile printerProfile)
         {
             _sharedPort = sharedPort;
+            _printerProfile = printerProfile;
 
             MoveXCommand = new RelayCommand(async p => await MoveAxisAsync("X", p));
             MoveYCommand = new RelayCommand(async p => await MoveAxisAsync("Y", p));
@@ -166,6 +172,9 @@ namespace PrinterGUI.ViewModels
                 return;
             }
 
+            if (extruderIndex == 1 && Math.Abs(Math.Abs(distance) - 17) < 0.001)
+                distance = Math.CopySign(_printerProfile.DoorTravelMm, distance);
+
             var toolCmd = extruderIndex == 0 ? "T0" : "T1";
             var resetToolCmd = extruderIndex == 0 ? string.Empty : "\nT0";
             var gcode = $"{toolCmd}\nG91\nG1 E{distance:F2} F400\nG1 F3000\nG90{resetToolCmd}";
@@ -174,10 +183,20 @@ namespace PrinterGUI.ViewModels
 
         async Task HomeAllAsync()
         {
-            // If "G28 Y0 F" was intentional, confirm the exact G-code.
-            // "G28 Y0 F" is not valid G-code as written.
-            var gcode = "T1\nG1 E-17 F800\nG28\nG28 Y0\nG1 E0 F800\nT0";
+            var doorTravel = _printerProfile.DoorTravelMm.ToString("0.###", CultureInfo.InvariantCulture);
+            var gcode = _printerProfile.SafeHomingEnabled && _printerProfile.RequiresDoorOpenBeforeHoming
+                ? $"T1\nG1 E-{doorTravel} F800\nG28\nG28 Y0\nG1 E0 F800\nT0"
+                : _printerProfile.SafeHomingEnabled
+                    ? "G28\nG28 Y0"
+                    : BuildZHomeGcode();
             await SendGcodeAsync(gcode);
+        }
+
+        string BuildZHomeGcode()
+        {
+            var homeX = _printerProfile.ZHomeXMm.ToString("0.###", CultureInfo.InvariantCulture);
+            var homeY = _printerProfile.ZHomeYMm.ToString("0.###", CultureInfo.InvariantCulture);
+            return $"G28 X0 Y0\nG90\nG1 X{homeX} Y{homeY} F3000\nG28 Z0";
         }
 
         async Task SendCustomGcodeAsync()

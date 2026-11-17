@@ -1,0 +1,10 @@
+{
+  "Name": "Current printer",
+  "DoorTravelMm": 17,
+  "RequiresDoorOpenBeforeHoming": true,
+  "SafeHomingEnabled": true,
+  "BedSizeXMm": 261,
+  "BedSizeYMm": 132,
+  "ZHomeXMm": 130,
+  "ZHomeYMm": 58
+}
