@@ -121,10 +121,39 @@ namespace PrinterGUI.Services
 
             // read FlowRatePercent from meta (if present)
             var flowRatePercent = ToInt(meta.GetValueOrDefault("FlowRatePercent"));
+            var dryingEnabled = (dryingTimeMin ?? 0) > 0 || (dryingTimeRTMin ?? 0) > 0;
+            var skippingDryingBlock = false;
+            var countDryingBlocksRemoved = 0;
 
             foreach (var ln in lines)
             {
                 ct.ThrowIfCancellationRequested();
+                var trimmed = ln.Trim();
+
+                if (trimmed.StartsWith("; START DRYING", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!dryingEnabled)
+                    {
+                        skippingDryingBlock = true;
+                        countDryingBlocksRemoved++;
+                    }
+                    else
+                    {
+                        outLines.Add(ln);
+                    }
+                    continue;
+                }
+
+                if (skippingDryingBlock)
+                {
+                    if (trimmed.StartsWith("; END DRYING", StringComparison.OrdinalIgnoreCase))
+                        skippingDryingBlock = false;
+                    continue;
+                }
+
+                if (trimmed.StartsWith("; END DRYING", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 var replaced = false;
                 var m = reM141.Match(ln);
                 if (m.Success)
@@ -184,6 +213,7 @@ namespace PrinterGUI.Services
             result.Counts["G4_drying_time"] = countG4_drying_time;
             result.Counts["G4_drying_time_RT"] = countG4_drying_time_rt;
             result.Counts["M221"] = countM221; // NEW
+            result.Counts["DryingBlocksRemoved"] = countDryingBlocksRemoved;
 
             // Insert processing marker near top (after initial comments) if not already present
             bool hasMarker = outLines.Count > 0 && outLines.Take(50).Any(l => l != null && l.Contains("; POST-PROCESSED-BY: post_process_gcode.cs"));
@@ -255,7 +285,7 @@ namespace PrinterGUI.Services
                 // ignore errors writing report
             }
 
-            progress?.Report($"Post-processor: replaced {countM141} M141, {countG4_drying_time} G4(drying_time), {countG4_drying_time_rt} G4(drying_time_RT)");
+            progress?.Report($"Post-processor: replaced {countM141} M141, {countG4_drying_time} G4(drying_time), {countG4_drying_time_rt} G4(drying_time_RT); drying blocks removed={countDryingBlocksRemoved}");
             return result;
         }
     }

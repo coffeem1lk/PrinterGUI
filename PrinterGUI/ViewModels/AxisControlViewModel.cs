@@ -172,9 +172,6 @@ namespace PrinterGUI.ViewModels
                 return;
             }
 
-            if (extruderIndex == 1 && Math.Abs(Math.Abs(distance) - 17) < 0.001)
-                distance = Math.CopySign(_printerProfile.DoorTravelMm, distance);
-
             var toolCmd = extruderIndex == 0 ? "T0" : "T1";
             var resetToolCmd = extruderIndex == 0 ? string.Empty : "\nT0";
             var gcode = $"{toolCmd}\nG91\nG1 E{distance:F2} F400\nG1 F3000\nG90{resetToolCmd}";
