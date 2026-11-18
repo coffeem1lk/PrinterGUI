@@ -45,7 +45,7 @@ namespace PrinterGUI.Services
             int dryingTimeRT = 0,
             double printSpeed = 11.5,
             string prusaSlicerPath = "prusa-slicer",
-            string? profilePath = "/home/raspberrypie/config.ini",
+            string? profilePath = null,
             string? extraArgs = null,
             TimeSpan? timeout = null,
             IProgress<string>? outputProgress = null,
@@ -56,8 +56,17 @@ namespace PrinterGUI.Services
             if (!File.Exists(stlPath))
                 throw new FileNotFoundException("Input STL not found", stlPath);
 
-            if (profilePath != null && !File.Exists(profilePath))
-                throw new FileNotFoundException("Profile file not found", profilePath);
+            profilePath ??= PrinterPaths.SlicerConfig;
+
+            if (!File.Exists(profilePath))
+            {
+                return new SlicerResult
+                {
+                    Success = false,
+                    Error = $"PrusaSlicer config profile not found: {profilePath}",
+                    ExitCode = -4
+                };
+            }
 
             timeout ??= TimeSpan.FromMinutes(10);
             Directory.CreateDirectory(Path.GetDirectoryName(outputGcodePath) ?? Path.GetTempPath());

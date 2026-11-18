@@ -134,7 +134,7 @@ namespace PrinterGUI.ViewModels
 
         CancellationTokenSource? _cts;
 
-        readonly string _modelsFolder = "/home/raspberrypie/stl";
+        readonly string _modelsFolder = PrinterPaths.ModelsDirectory;
         FileSystemWatcher? _watcher;
         readonly SynchronizationContext? _uiContext;
         Timer? _debounceTimer;
@@ -463,7 +463,7 @@ namespace PrinterGUI.ViewModels
 
                     try
                     {
-                        string gcodeFolder = "/home/raspberrypie/gcode";
+                        string gcodeFolder = PrinterPaths.GcodeDirectory;
                         if (!Directory.Exists(gcodeFolder))
                             Directory.CreateDirectory(gcodeFolder);
 
@@ -506,24 +506,34 @@ namespace PrinterGUI.ViewModels
                     if (int.TryParse(FlowRatePercent, NumberStyles.Integer, CultureInfo.InvariantCulture, out var frVal))
                         flowRate = frVal;
 
-                    var resultPath = await GcodeGenerator.SliceWithPrusaAsync(
-                        stlPath,
-                        tempPath,
-                        layerHeight,
-                        infill,
-                        extruderTemp,
-                        dryingTemp,
-                        dryingTime,
-                        dryingTimeRT,
-                        printSpeed,
-                        prusaSlicerPath: PrusaSlicerPath,
-                        profilePath: "/home/raspberrypie/config.ini",
-                        extraArgs: null,
-                        timeout: TimeSpan.FromMinutes(12),
-                        outputProgress: slicerProgress,
-                        cancellationToken: _cts.Token,
-                        flowRatePercent: flowRate,
-                        printerProfile: _printerProfile);
+                    SlicerResult resultPath;
+                    try
+                    {
+                        resultPath = await GcodeGenerator.SliceWithPrusaAsync(
+                            stlPath,
+                            tempPath,
+                            layerHeight,
+                            infill,
+                            extruderTemp,
+                            dryingTemp,
+                            dryingTime,
+                            dryingTimeRT,
+                            printSpeed,
+                            prusaSlicerPath: PrusaSlicerPath,
+                            profilePath: PrinterPaths.SlicerConfig,
+                            extraArgs: null,
+                            timeout: TimeSpan.FromMinutes(12),
+                            outputProgress: slicerProgress,
+                            cancellationToken: _cts.Token,
+                            flowRatePercent: flowRate,
+                            printerProfile: _printerProfile);
+                    }
+                    catch (Exception ex)
+                    {
+                        Status = $"Slicing failed: {ex.Message}";
+                        IsSending = false;
+                        return;
+                    }
 
                     if (!resultPath.Success)
                     {
@@ -534,7 +544,7 @@ namespace PrinterGUI.ViewModels
 
                     try
                     {
-                        string gcodeFolder = "/home/raspberrypie/gcode";
+                        string gcodeFolder = PrinterPaths.GcodeDirectory;
                         if (!Directory.Exists(gcodeFolder))
                             Directory.CreateDirectory(gcodeFolder);
 
@@ -763,7 +773,7 @@ namespace PrinterGUI.ViewModels
         {
             try
             {
-                string gcodeFolder = "/home/raspberrypie/gcode";
+                string gcodeFolder = PrinterPaths.GcodeDirectory;
                 
                 if (!Directory.Exists(gcodeFolder))
                     return;
@@ -1165,7 +1175,7 @@ namespace PrinterGUI.ViewModels
         private const int OdfGridColumns = 6;
         private const int OdfGridRows = 4;
         private const int OdfMaxFilms = OdfGridColumns * OdfGridRows;
-        private const string GummiesPointsJsonPath = "/home/raspberrypie/json/gummies_points.json";
+        private static readonly string GummiesPointsJsonPath = PrinterPaths.GummiesPointsJson;
 
         private sealed class GummiesPointsConfig
         {
