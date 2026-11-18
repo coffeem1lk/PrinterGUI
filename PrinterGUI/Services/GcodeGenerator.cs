@@ -50,7 +50,8 @@ namespace PrinterGUI.Services
             TimeSpan? timeout = null,
             IProgress<string>? outputProgress = null,
             CancellationToken cancellationToken = default,
-            int? flowRatePercent = null)
+            int? flowRatePercent = null,
+            PrinterProfile? printerProfile = null)
         {
             if (!File.Exists(stlPath))
                 throw new FileNotFoundException("Input STL not found", stlPath);
@@ -66,14 +67,22 @@ namespace PrinterGUI.Services
 
             try
             {
-                if (flowRatePercent.HasValue && !string.IsNullOrWhiteSpace(profilePath))
+                if ((!string.IsNullOrWhiteSpace(profilePath)) &&
+                    (flowRatePercent.HasValue || printerProfile is not null))
                 {
-                    var frPercent = Math.Clamp(flowRatePercent.Value, 0, 200);
-
                     var profileText = await File.ReadAllTextAsync(profilePath, cancellationToken).ConfigureAwait(false);
 
-                    // Replace the placeholder used in start_gcode, just like drying_temp / drying_time placeholders.
-                    profileText = profileText.Replace("\"FR_percent\"", frPercent.ToString(CultureInfo.InvariantCulture));
+                    if (flowRatePercent.HasValue)
+                    {
+                        var frPercent = Math.Clamp(flowRatePercent.Value, 0, 200);
+                        profileText = profileText.Replace("\"FR_percent\"", frPercent.ToString(CultureInfo.InvariantCulture));
+                    }
+
+                    if (printerProfile is not null)
+                    {
+                        profileText = profileText.Replace("\"ODF_Z_HOME_X\"", printerProfile.OdfZHomeXMm.ToString(CultureInfo.InvariantCulture));
+                        profileText = profileText.Replace("\"ODF_Z_HOME_Y\"", printerProfile.OdfZHomeYMm.ToString(CultureInfo.InvariantCulture));
+                    }
 
                     tempProfilePath = Path.Combine(Path.GetTempPath(), $"PrinterGUI_profile_{Guid.NewGuid():N}.ini");
                     await File.WriteAllTextAsync(tempProfilePath, profileText, cancellationToken).ConfigureAwait(false);

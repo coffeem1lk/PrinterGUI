@@ -522,7 +522,8 @@ namespace PrinterGUI.ViewModels
                         timeout: TimeSpan.FromMinutes(12),
                         outputProgress: slicerProgress,
                         cancellationToken: _cts.Token,
-                        flowRatePercent: flowRate);
+                        flowRatePercent: flowRate,
+                        printerProfile: _printerProfile);
 
                     if (!resultPath.Success)
                     {
@@ -1075,7 +1076,19 @@ namespace PrinterGUI.ViewModels
                 sb.AppendLine($"G1 E-{doorTravel} F1000\t; open oven door");
                 sb.AppendLine("T0\t\t; select E0 (extruder)");
             }
-            sb.AppendLine("G28\t\t; home all axes");
+            if (printerProfile.SafeHomingEnabled)
+            {
+                sb.AppendLine("G28\t\t; home all axes");
+            }
+            else
+            {
+                var homeX = printerProfile.ZHomeXMm.ToString("0.###", ci);
+                var homeY = printerProfile.ZHomeYMm.ToString("0.###", ci);
+                sb.AppendLine("G28 X0 Y0\t; home X and Y");
+                sb.AppendLine("G90\t\t; use absolute coordinates");
+                sb.AppendLine($"G1 X{homeX} Y{homeY} F3000\t; move to Z homing position");
+                sb.AppendLine("G28 Z0\t\t; home Z");
+            }
             sb.AppendLine();
             sb.AppendLine("; Filament gcode");
             sb.AppendLine();

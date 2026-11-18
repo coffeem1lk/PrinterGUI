@@ -93,7 +93,9 @@ namespace PrinterGUI.ViewModels
             var doorTravel = _printerProfile.DoorTravelMm.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
             var response = _printerProfile.SafeHomingEnabled && _printerProfile.RequiresDoorOpenBeforeHoming
                 ? await SendGcodeAsync($"T1\nG1 E-{doorTravel} F800\nG28", timeoutSeconds: 30)
-                : await SendGcodeAsync("G28", timeoutSeconds: 30);
+                : _printerProfile.SafeHomingEnabled
+                    ? await SendGcodeAsync("G28", timeoutSeconds: 30)
+                    : await SendGcodeAsync($"G28 X0 Y0\nG90\nG1 X{_printerProfile.ZHomeXMm.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)} Y{_printerProfile.ZHomeYMm.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)} F3000\nG28 Z0", timeoutSeconds: 30);
 
             if (!string.IsNullOrEmpty(response))
             {

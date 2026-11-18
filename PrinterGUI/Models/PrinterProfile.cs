@@ -10,5 +10,7 @@ namespace PrinterGUI.Models
         public double BedSizeYMm { get; set; } = 132;
         public double ZHomeXMm { get; set; } = 130;
         public double ZHomeYMm { get; set; } = 58;
+        public double OdfZHomeXMm { get; set; } = 35;
+        public double OdfZHomeYMm { get; set; } = 130;
     }
 }

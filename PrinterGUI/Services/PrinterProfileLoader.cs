@@ -38,6 +38,10 @@ namespace PrinterGUI.Services
                     profile.ZHomeYMm < 0 || profile.ZHomeYMm > profile.BedSizeYMm)
                     throw new InvalidDataException("Printer profile Z homing coordinates must be within the bed dimensions.");
 
+                if (profile.OdfZHomeXMm < 0 || profile.OdfZHomeXMm > profile.BedSizeXMm ||
+                    profile.OdfZHomeYMm < 0 || profile.OdfZHomeYMm > profile.BedSizeYMm)
+                    throw new InvalidDataException("Printer profile ODF Z homing coordinates must be within the bed dimensions.");
+
                 return profile;
             }
             catch (JsonException ex)

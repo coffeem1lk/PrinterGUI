@@ -6,5 +6,7 @@
   "BedSizeXMm": 261,
   "BedSizeYMm": 132,
   "ZHomeXMm": 130,
-  "ZHomeYMm": 58
+  "ZHomeYMm": 58,
+  "OdfZHomeXMm": 35,
+  "OdfZHomeYMm": 130
 }
