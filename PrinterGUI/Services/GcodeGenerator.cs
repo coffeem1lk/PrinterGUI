@@ -148,9 +148,21 @@ namespace PrinterGUI.Services
                 var stdoutBuilder = new StringBuilder();
                 var stderrBuilder = new StringBuilder();
 
+                var resolvedPrusaSlicerPath = ResolveExecutable(prusaSlicerPath);
+                if (resolvedPrusaSlicerPath is null)
+                {
+                    return new SlicerResult
+                    {
+                        Success = false,
+                        Error = $"PrusaSlicer executable not found: '{prusaSlicerPath}'. Install it or add it to PATH.",
+                        ExitCode = -5
+                    };
+                }
+
                 using var proc = new Process();
-                proc.StartInfo.FileName = prusaSlicerPath;
+                proc.StartInfo.FileName = resolvedPrusaSlicerPath;
                 proc.StartInfo.Arguments = args.ToString();
+                proc.StartInfo.WorkingDirectory = Path.GetDirectoryName(outputGcodePath) ?? Path.GetTempPath();
                 proc.StartInfo.CreateNoWindow = true;
                 proc.StartInfo.UseShellExecute = false;
                 proc.StartInfo.RedirectStandardOutput = true;
@@ -342,6 +354,39 @@ namespace PrinterGUI.Services
                     try { File.Delete(tempProfilePath); } catch { }
                 }
             }
+        }
+
+        static string? ResolveExecutable(string executable)
+        {
+            if (string.IsNullOrWhiteSpace(executable))
+                return null;
+
+            if (executable.Contains('/') || executable.Contains('\\'))
+                return File.Exists(executable) ? Path.GetFullPath(executable) : null;
+
+            var candidates = new[]
+            {
+                $"/usr/bin/{executable}",
+                $"/usr/local/bin/{executable}",
+                $"/snap/bin/{executable}",
+                $"/opt/PrusaSlicer/{executable}"
+            };
+
+            foreach (var candidate in candidates)
+            {
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+
+            var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var candidate = Path.Combine(directory.Trim(), executable);
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+
+            return null;
         }
 
         static bool TryParseLayerCount(string output, out int? layerCount)

@@ -974,14 +974,14 @@ namespace PrinterGUI.ViewModels
                 return false;
             }
 
-            // Fill a fixed 6x4 grid from (0,0), left-to-right, then bottom-to-top.
+            // Fill a fixed 6x4 grid from the generic area origin, left-to-right, then bottom-to-top.
             for (int i = 0; i < filmCount; i++)
             {
                 int col = i % OdfGridColumns;
                 int row = i / OdfGridColumns;
 
-                var x = col * (widthMm + OdfGapMm);
-                var y = row * (lengthMm + OdfGapMm);
+                var x = OdfFirstFilmXMm + col * (widthMm + OdfGapMm);
+                var y = OdfFirstFilmYMm + row * (lengthMm + OdfGapMm);
 
                 origins.Add((x, y));
             }
@@ -1171,6 +1171,8 @@ namespace PrinterGUI.ViewModels
 
         private const double OdfBedXMaxMm = 261.0;
         private const double OdfBedYMaxMm = 132.0; // if your Y max is really 261, set this to 261.0
+        private const double OdfFirstFilmXMm = 12.0;
+        private const double OdfFirstFilmYMm = 90.0;
         private const double OdfGapMm = 10.0;
         private const int OdfGridColumns = 6;
         private const int OdfGridRows = 4;
