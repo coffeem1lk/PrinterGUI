@@ -314,14 +314,14 @@ namespace PrinterGUI.ViewModels
                     return;
                 }
 
-                if (!TryBuildOdfFilmOrigins(widthMm, lengthMm, filmCount, out var filmOrigins, out var layoutError))
+                if (!TryBuildOdfFilmOrigins(widthMm, lengthMm, filmCount, out var filmOrigins, out var layoutWidthMm, out var layoutLengthMm, out var layoutError))
                 {
                     Status = layoutError;
                     return;
                 }
 
                 stlPath = Path.Combine(Path.GetTempPath(), $"odf_rect_{Guid.NewGuid():N}.stl");
-                WriteOdfLayoutStl(stlPath, widthMm, lengthMm, thicknessMm, filmOrigins);
+                WriteOdfLayoutStl(stlPath, layoutWidthMm, layoutLengthMm, thicknessMm, filmOrigins);
             }
             else if (!IsGummies)
             {
@@ -963,9 +963,13 @@ namespace PrinterGUI.ViewModels
         double lengthMm,
         int filmCount,
         out List<(double x, double y)> origins,
+        out double layoutWidthMm,
+        out double layoutLengthMm,
         out string error)
         {
             origins = new List<(double x, double y)>(filmCount);
+            layoutWidthMm = widthMm;
+            layoutLengthMm = lengthMm;
             error = string.Empty;
 
             if (filmCount < 1 || filmCount > OdfMaxFilms)
@@ -974,34 +978,63 @@ namespace PrinterGUI.ViewModels
                 return false;
             }
 
-            var availableWidth = OdfGenericAreaMaxXMm - OdfGenericAreaMinXMm;
-            var availableLength = OdfGenericAreaMaxYMm - OdfGenericAreaMinYMm;
-            var columns = (int)Math.Floor((availableWidth + OdfGapMm) / (widthMm + OdfGapMm));
-            var rows = (int)Math.Floor((availableLength + OdfGapMm) / (lengthMm + OdfGapMm));
-            var capacity = columns * rows;
+            var printWidth = widthMm;
+            var printLength = lengthMm;
 
-            if (columns < 1 || rows < 1 || filmCount > capacity)
+            if (!OdfAreas.All(area =>
+                    CanPackFourFilms(area.XMin, area.XMax, area.YMin, area.YMax,
+                        printWidth, printLength)))
             {
-                error = $"ODF layout must fit within X {OdfGenericAreaMinXMm}-{OdfGenericAreaMaxXMm} and Y {OdfGenericAreaMinYMm}-{OdfGenericAreaMaxYMm} mm. " +
-                        $"The selected film size and spacing allow {Math.Max(capacity, 0)} film(s).";
+                printWidth = lengthMm;
+                printLength = widthMm;
+            }
+
+            if (!OdfAreas.All(area =>
+                    CanPackFourFilms(area.XMin, area.XMax, area.YMin, area.YMax,
+                        printWidth, printLength)))
+            {
+                error = "ODF films must be 2x3 cm or 3x2 cm and fit four films in each numbered area.";
                 return false;
             }
 
-            for (int i = 0; i < filmCount; i++)
-            {
-                int col = i % columns;
-                int row = i / columns;
+            layoutWidthMm = printWidth;
+            layoutLengthMm = printLength;
 
-                var x = OdfGenericAreaMinXMm + col * (widthMm + OdfGapMm);
-                var y = OdfGenericAreaMinYMm + row * (lengthMm + OdfGapMm);
+            for (int filmIndex = 0; filmIndex < filmCount; filmIndex++)
+            {
+                int areaIndex = filmIndex / FilmsPerOdfArea;
+                int positionIndex = filmIndex % FilmsPerOdfArea;
+                var area = OdfAreas[areaIndex];
+
+                int col = positionIndex % OdfAreaColumns;
+                int row = positionIndex / OdfAreaColumns;
+
+                var x = area.XMin + col * (printWidth + OdfGapMm);
+                var y = area.YMin + row * (printLength + OdfGapMm);
                 origins.Add((x, y));
             }
 
             return origins.All(origin =>
-                origin.x >= OdfGenericAreaMinXMm &&
-                origin.y >= OdfGenericAreaMinYMm &&
-                origin.x + widthMm <= OdfGenericAreaMaxXMm &&
-                origin.y + lengthMm <= OdfGenericAreaMaxYMm);
+            {
+                var area = OdfAreas.First(area =>
+                    origin.x >= area.XMin && origin.x + printWidth <= area.XMax &&
+                    origin.y >= area.YMin && origin.y + printLength <= area.YMax);
+                return area.XMin <= origin.x && origin.x + printWidth <= area.XMax &&
+                       area.YMin <= origin.y && origin.y + printLength <= area.YMax;
+            });
+        }
+
+        private static bool CanPackFourFilms(
+            double xMin,
+            double xMax,
+            double yMin,
+            double yMax,
+            double filmWidth,
+            double filmLength)
+        {
+            var packedWidth = OdfAreaColumns * filmWidth + (OdfAreaColumns - 1) * OdfGapMm;
+            var packedLength = OdfAreaRows * filmLength + (OdfAreaRows - 1) * OdfGapMm;
+            return packedWidth <= xMax - xMin && packedLength <= yMax - yMin;
         }
 
         private static void WriteOdfLayoutStl(
@@ -1175,12 +1208,22 @@ namespace PrinterGUI.ViewModels
             return sb.ToString();
         }
 
-        private const double OdfGenericAreaMinXMm = 12.0;
-        private const double OdfGenericAreaMaxXMm = 72.0;
-        private const double OdfGenericAreaMinYMm = 90.0;
-        private const double OdfGenericAreaMaxYMm = 130.0;
         private const double OdfGapMm = 10.0;
+        private const int OdfAreaColumns = 2;
+        private const int OdfAreaRows = 2;
+        private const int FilmsPerOdfArea = OdfAreaColumns * OdfAreaRows;
         private const int OdfMaxFilms = 24;
+
+        private static readonly (double XMin, double XMax, double YMin, double YMax)[] OdfAreas =
+        {
+            (10, 83, 84, 139),
+            (101, 174, 84, 139),
+            (193, 263, 84, 139),
+            (193, 263, 12, 66),
+            (101, 174, 12, 66),
+            (10, 83, 12, 66)
+        };
+
         private static readonly string GummiesPointsJsonPath = PrinterPaths.GummiesPointsJson;
 
         private sealed class GummiesPointsConfig
