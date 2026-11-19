@@ -101,7 +101,7 @@
             </StackPanel>
 
             <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,6,0,0">
-              <TextBlock Text="Size (mm)" Width="132" VerticalAlignment="Center"/>
+              <TextBlock Text="Size (mm) (20x30 or 30x20)" Width="180" VerticalAlignment="Center"/>
               <TextBox x:Name="OdfWidthTextBox" Text="{Binding OdfWidthMm}" Width="60"
                        GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
               <TextBlock Text="x" Margin="8,0" VerticalAlignment="Center"/>

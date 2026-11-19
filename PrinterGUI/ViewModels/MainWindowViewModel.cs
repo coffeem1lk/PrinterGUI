@@ -978,6 +978,15 @@ namespace PrinterGUI.ViewModels
                 return false;
             }
 
+            var isPortrait = widthMm == 20.0 && lengthMm == 30.0;
+            var isLandscape = widthMm == 30.0 && lengthMm == 20.0;
+
+            if (!isPortrait && !isLandscape)
+            {
+                error = "ODF films must be 2x3 cm or 3x2 cm (20x30 mm or 30x20 mm).";
+                return false;
+            }
+
             var printWidth = widthMm;
             var printLength = lengthMm;
 
@@ -993,7 +1002,7 @@ namespace PrinterGUI.ViewModels
                     CanPackFourFilms(area.XMin, area.XMax, area.YMin, area.YMax,
                         printWidth, printLength)))
             {
-                error = "ODF films must be 2x3 cm or 3x2 cm and fit four films in each numbered area.";
+                error = "ODF films must fit four in each numbered area.";
                 return false;
             }
 
@@ -1208,7 +1217,7 @@ namespace PrinterGUI.ViewModels
             return sb.ToString();
         }
 
-        private const double OdfGapMm = 10.0;
+        private const double OdfGapMm = 0.0;
         private const int OdfAreaColumns = 2;
         private const int OdfAreaRows = 2;
         private const int FilmsPerOdfArea = OdfAreaColumns * OdfAreaRows;
