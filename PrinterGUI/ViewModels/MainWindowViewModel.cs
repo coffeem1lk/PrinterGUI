@@ -1217,7 +1217,7 @@ namespace PrinterGUI.ViewModels
             return sb.ToString();
         }
 
-        private const double OdfGapMm = 0.0;
+        private const double OdfGapMm = 5.0;
         private const int OdfAreaColumns = 2;
         private const int OdfAreaRows = 2;
         private const int FilmsPerOdfArea = OdfAreaColumns * OdfAreaRows;
