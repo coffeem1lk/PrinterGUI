@@ -974,28 +974,34 @@ namespace PrinterGUI.ViewModels
                 return false;
             }
 
-            // Fill a fixed 6x4 grid from the generic area origin, left-to-right, then bottom-to-top.
+            var availableWidth = OdfGenericAreaMaxXMm - OdfGenericAreaMinXMm;
+            var availableLength = OdfGenericAreaMaxYMm - OdfGenericAreaMinYMm;
+            var columns = (int)Math.Floor((availableWidth + OdfGapMm) / (widthMm + OdfGapMm));
+            var rows = (int)Math.Floor((availableLength + OdfGapMm) / (lengthMm + OdfGapMm));
+            var capacity = columns * rows;
+
+            if (columns < 1 || rows < 1 || filmCount > capacity)
+            {
+                error = $"ODF layout must fit within X {OdfGenericAreaMinXMm}-{OdfGenericAreaMaxXMm} and Y {OdfGenericAreaMinYMm}-{OdfGenericAreaMaxYMm} mm. " +
+                        $"The selected film size and spacing allow {Math.Max(capacity, 0)} film(s).";
+                return false;
+            }
+
             for (int i = 0; i < filmCount; i++)
             {
-                int col = i % OdfGridColumns;
-                int row = i / OdfGridColumns;
+                int col = i % columns;
+                int row = i / columns;
 
-                var x = OdfFirstFilmXMm + col * (widthMm + OdfGapMm);
-                var y = OdfFirstFilmYMm + row * (lengthMm + OdfGapMm);
-
+                var x = OdfGenericAreaMinXMm + col * (widthMm + OdfGapMm);
+                var y = OdfGenericAreaMinYMm + row * (lengthMm + OdfGapMm);
                 origins.Add((x, y));
             }
 
-            foreach (var (x, y) in origins)
-            {
-                if (x < 0 || y < 0 || (x + widthMm) > OdfBedXMaxMm || (y + lengthMm) > OdfBedYMaxMm)
-                {
-                    error = $"ODF layout does not fit bed ({OdfBedXMaxMm} x {OdfBedYMaxMm} mm) with {filmCount} film(s).";
-                    return false;
-                }
-            }
-
-            return true;
+            return origins.All(origin =>
+                origin.x >= OdfGenericAreaMinXMm &&
+                origin.y >= OdfGenericAreaMinYMm &&
+                origin.x + widthMm <= OdfGenericAreaMaxXMm &&
+                origin.y + lengthMm <= OdfGenericAreaMaxYMm);
         }
 
         private static void WriteOdfLayoutStl(
@@ -1169,14 +1175,12 @@ namespace PrinterGUI.ViewModels
             return sb.ToString();
         }
 
-        private const double OdfBedXMaxMm = 261.0;
-        private const double OdfBedYMaxMm = 132.0; // if your Y max is really 261, set this to 261.0
-        private const double OdfFirstFilmXMm = 12.0;
-        private const double OdfFirstFilmYMm = 90.0;
+        private const double OdfGenericAreaMinXMm = 12.0;
+        private const double OdfGenericAreaMaxXMm = 72.0;
+        private const double OdfGenericAreaMinYMm = 90.0;
+        private const double OdfGenericAreaMaxYMm = 130.0;
         private const double OdfGapMm = 10.0;
-        private const int OdfGridColumns = 6;
-        private const int OdfGridRows = 4;
-        private const int OdfMaxFilms = OdfGridColumns * OdfGridRows;
+        private const int OdfMaxFilms = 24;
         private static readonly string GummiesPointsJsonPath = PrinterPaths.GummiesPointsJson;
 
         private sealed class GummiesPointsConfig
