@@ -1216,12 +1216,12 @@ namespace PrinterGUI.ViewModels
 
         private static readonly (double XMin, double XMax, double YMin, double YMax)[] OdfAreas =
         {
-            (10, 83, 84, 139),
-            (101, 174, 84, 139),
-            (193, 263, 84, 139),
-            (193, 263, 12, 66),
-            (101, 174, 12, 66),
-            (10, 83, 12, 66)
+            (10, 83, 90, 139),
+            (101, 174, 90, 139),
+            (193, 263, 90, 139),
+            (193, 263, 18, 66),
+            (101, 174, 18, 66),
+            (10, 83, 18, 66)
         };
 
         private static readonly string GummiesPointsJsonPath = PrinterPaths.GummiesPointsJson;
