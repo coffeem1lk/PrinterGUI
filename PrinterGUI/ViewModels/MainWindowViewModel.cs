@@ -521,7 +521,7 @@ namespace PrinterGUI.ViewModels
                             printSpeed,
                             prusaSlicerPath: PrusaSlicerPath,
                             profilePath: PrinterPaths.SlicerConfig,
-                            extraArgs: null,
+                            extraArgs: IsOdf ? "--dont-arrange" : null,
                             timeout: TimeSpan.FromMinutes(12),
                             outputProgress: slicerProgress,
                             cancellationToken: _cts.Token,
