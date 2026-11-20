@@ -987,23 +987,25 @@ namespace PrinterGUI.ViewModels
                 return false;
             }
 
-            var isPortrait = widthMm == 20.0 && lengthMm == 30.0;
-            var isLandscape = widthMm == 30.0 && lengthMm == 20.0;
-
-            if (!isPortrait && !isLandscape)
-            {
-                error = "ODF films must be 2x3 cm or 3x2 cm (20x30 mm or 30x20 mm).";
-                return false;
-            }
-
-            var printWidth = 30.0;
-            var printLength = 20.0;
+            var printWidth = widthMm;
+            var printLength = lengthMm;
 
             if (!CanPackFourFilms(OdfAreaWidthMm, OdfAreaHeightMm, printWidth, printLength))
             {
-                error = "ODF films must fit four in each numbered area.";
+                printWidth = lengthMm;
+                printLength = widthMm;
+            }
+
+            if (!CanPackFourFilms(OdfAreaWidthMm, OdfAreaHeightMm, printWidth, printLength))
+            {
+                error = $"ODF films of {widthMm}x{lengthMm} mm do not fit four in a {OdfAreaWidthMm}x{OdfAreaHeightMm} mm area.";
                 return false;
             }
+
+            var xSpacing = OdfAreaWidthMm - (OdfAreaColumns * printWidth);
+            var ySpacing = OdfAreaHeightMm - (OdfAreaRows * printLength);
+            var xStep = printWidth + xSpacing;
+            var yStep = printLength + ySpacing;
 
             layoutWidthMm = printWidth;
             layoutLengthMm = printLength;
@@ -1017,8 +1019,8 @@ namespace PrinterGUI.ViewModels
                 int col = positionIndex % OdfAreaColumns;
                 int row = positionIndex / OdfAreaColumns;
 
-                var x = area.XMin + col * (printWidth + OdfGapMm);
-                var y = area.YMin + row * (printLength + OdfGapMm);
+                var x = area.XMin + col * xStep;
+                var y = area.YMin + row * yStep;
                 origins.Add((x, y));
             }
 
@@ -1034,9 +1036,9 @@ namespace PrinterGUI.ViewModels
             double filmWidth,
             double filmLength)
         {
-            var packedWidth = OdfAreaColumns * filmWidth + (OdfAreaColumns - 1) * OdfGapMm;
-            var packedLength = OdfAreaRows * filmLength + (OdfAreaRows - 1) * OdfGapMm;
-            return packedWidth <= areaWidth && packedLength <= areaHeight;
+            var remainingWidth = areaWidth - OdfAreaColumns * filmWidth;
+            var remainingHeight = areaHeight - OdfAreaRows * filmLength;
+            return remainingWidth >= 0 && remainingHeight >= 0;
         }
 
         private static void WriteOdfLayoutStl(
@@ -1212,7 +1214,6 @@ namespace PrinterGUI.ViewModels
 
         private const double OdfAreaWidthMm = 68.0;
         private const double OdfAreaHeightMm = 50.0;
-        private const double OdfGapMm = 8.0;
         private const int OdfAreaColumns = 2;
         private const int OdfAreaRows = 2;
         private const int FilmsPerOdfArea = OdfAreaColumns * OdfAreaRows;
