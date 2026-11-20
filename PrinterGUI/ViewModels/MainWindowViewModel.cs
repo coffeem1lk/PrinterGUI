@@ -308,13 +308,21 @@ namespace PrinterGUI.ViewModels
                     return;
                 }
 
-                if (!int.TryParse(OdfFilmCount, out var filmCount) || filmCount < 1 || filmCount > OdfMaxFilms)
+                var selectedOdfAreas = GetSelectedOdfAreas();
+                if (selectedOdfAreas.Count == 0)
                 {
-                    Status = $"Invalid ODF film count (1-{OdfMaxFilms})";
+                    Status = "Select at least one ODF area";
                     return;
                 }
 
-                if (!TryBuildOdfFilmOrigins(widthMm, lengthMm, filmCount, out var filmOrigins, out var layoutWidthMm, out var layoutLengthMm, out var layoutError))
+                var maximumFilmCount = selectedOdfAreas.Count * FilmsPerOdfArea;
+                if (!int.TryParse(OdfFilmCount, out var filmCount) || filmCount < 1 || filmCount > maximumFilmCount)
+                {
+                    Status = $"Invalid ODF film count (1-{maximumFilmCount}) for the selected areas";
+                    return;
+                }
+
+                if (!TryBuildOdfFilmOrigins(widthMm, lengthMm, filmCount, selectedOdfAreas, out var filmOrigins, out var layoutWidthMm, out var layoutLengthMm, out var layoutError))
                 {
                     Status = layoutError;
                     return;
@@ -962,6 +970,7 @@ namespace PrinterGUI.ViewModels
         double widthMm,
         double lengthMm,
         int filmCount,
+        IReadOnlyList<int> selectedAreaNumbers,
         out List<(double x, double y)> origins,
         out double layoutWidthMm,
         out double layoutLengthMm,
@@ -972,9 +981,9 @@ namespace PrinterGUI.ViewModels
             layoutLengthMm = lengthMm;
             error = string.Empty;
 
-            if (filmCount < 1 || filmCount > OdfMaxFilms)
+            if (filmCount < 1 || filmCount > selectedAreaNumbers.Count * FilmsPerOdfArea)
             {
-                error = $"ODF film count must be between 1 and {OdfMaxFilms}.";
+                error = $"ODF film count must be between 1 and {selectedAreaNumbers.Count * FilmsPerOdfArea} for the selected areas.";
                 return false;
             }
 
@@ -987,20 +996,10 @@ namespace PrinterGUI.ViewModels
                 return false;
             }
 
-            var printWidth = widthMm;
-            var printLength = lengthMm;
+            var printWidth = 30.0;
+            var printLength = 20.0;
 
-            if (!OdfAreas.All(area =>
-                    CanPackFourFilms(area.XMin, area.XMax, area.YMin, area.YMax,
-                        printWidth, printLength)))
-            {
-                printWidth = lengthMm;
-                printLength = widthMm;
-            }
-
-            if (!OdfAreas.All(area =>
-                    CanPackFourFilms(area.XMin, area.XMax, area.YMin, area.YMax,
-                        printWidth, printLength)))
+            if (!CanPackFourFilms(OdfAreaWidthMm, OdfAreaHeightMm, printWidth, printLength))
             {
                 error = "ODF films must fit four in each numbered area.";
                 return false;
@@ -1013,7 +1012,7 @@ namespace PrinterGUI.ViewModels
             {
                 int areaIndex = filmIndex / FilmsPerOdfArea;
                 int positionIndex = filmIndex % FilmsPerOdfArea;
-                var area = OdfAreas[areaIndex];
+                var area = OdfAreas[selectedAreaNumbers[areaIndex] - 1];
 
                 int col = positionIndex % OdfAreaColumns;
                 int row = positionIndex / OdfAreaColumns;
@@ -1024,26 +1023,20 @@ namespace PrinterGUI.ViewModels
             }
 
             return origins.All(origin =>
-            {
-                var area = OdfAreas.First(area =>
+                OdfAreas.Any(area =>
                     origin.x >= area.XMin && origin.x + printWidth <= area.XMax &&
-                    origin.y >= area.YMin && origin.y + printLength <= area.YMax);
-                return area.XMin <= origin.x && origin.x + printWidth <= area.XMax &&
-                       area.YMin <= origin.y && origin.y + printLength <= area.YMax;
-            });
+                    origin.y >= area.YMin && origin.y + printLength <= area.YMax));
         }
 
         private static bool CanPackFourFilms(
-            double xMin,
-            double xMax,
-            double yMin,
-            double yMax,
+            double areaWidth,
+            double areaHeight,
             double filmWidth,
             double filmLength)
         {
             var packedWidth = OdfAreaColumns * filmWidth + (OdfAreaColumns - 1) * OdfGapMm;
             var packedLength = OdfAreaRows * filmLength + (OdfAreaRows - 1) * OdfGapMm;
-            return packedWidth <= xMax - xMin && packedLength <= yMax - yMin;
+            return packedWidth <= areaWidth && packedLength <= areaHeight;
         }
 
         private static void WriteOdfLayoutStl(
@@ -1217,7 +1210,9 @@ namespace PrinterGUI.ViewModels
             return sb.ToString();
         }
 
-        private const double OdfGapMm = 5.0;
+        private const double OdfAreaWidthMm = 68.0;
+        private const double OdfAreaHeightMm = 50.0;
+        private const double OdfGapMm = 8.0;
         private const int OdfAreaColumns = 2;
         private const int OdfAreaRows = 2;
         private const int FilmsPerOdfArea = OdfAreaColumns * OdfAreaRows;
@@ -1225,12 +1220,12 @@ namespace PrinterGUI.ViewModels
 
         private static readonly (double XMin, double XMax, double YMin, double YMax)[] OdfAreas =
         {
-            (10, 83, 90, 139),
-            (101, 174, 90, 139),
-            (193, 263, 90, 139),
-            (193, 263, 18, 66),
-            (101, 174, 18, 66),
-            (10, 83, 18, 66)
+            (13.0, 81.0, 89.0, 139.0),
+            (104.0, 172.0, 89.0, 139.0),
+            (196.0, 264.0, 89.0, 139.0),
+            (196.0, 264.0, 17.5, 67.5),
+            (104.0, 172.0, 17.5, 67.5),
+            (13.0, 81.0, 17.5, 67.5)
         };
 
         private static readonly string GummiesPointsJsonPath = PrinterPaths.GummiesPointsJson;
@@ -1297,6 +1292,38 @@ namespace PrinterGUI.ViewModels
             try { _cts?.Cancel(); } catch { }
 
             await Task.CompletedTask;
+        }
+
+        bool _odfArea1Selected = true;
+        public bool OdfArea1Selected { get => _odfArea1Selected; set { _odfArea1Selected = value; Notify(nameof(OdfArea1Selected)); } }
+
+        bool _odfArea2Selected;
+        public bool OdfArea2Selected { get => _odfArea2Selected; set { _odfArea2Selected = value; Notify(nameof(OdfArea2Selected)); } }
+
+        bool _odfArea3Selected;
+        public bool OdfArea3Selected { get => _odfArea3Selected; set { _odfArea3Selected = value; Notify(nameof(OdfArea3Selected)); } }
+
+        bool _odfArea4Selected;
+        public bool OdfArea4Selected { get => _odfArea4Selected; set { _odfArea4Selected = value; Notify(nameof(OdfArea4Selected)); } }
+
+        bool _odfArea5Selected;
+        public bool OdfArea5Selected { get => _odfArea5Selected; set { _odfArea5Selected = value; Notify(nameof(OdfArea5Selected)); } }
+
+        bool _odfArea6Selected;
+        public bool OdfArea6Selected { get => _odfArea6Selected; set { _odfArea6Selected = value; Notify(nameof(OdfArea6Selected)); } }
+
+        private List<int> GetSelectedOdfAreas()
+        {
+            var selected = new List<int>(OdfAreas.Length);
+
+            if (OdfArea1Selected) selected.Add(1);
+            if (OdfArea2Selected) selected.Add(2);
+            if (OdfArea3Selected) selected.Add(3);
+            if (OdfArea4Selected) selected.Add(4);
+            if (OdfArea5Selected) selected.Add(5);
+            if (OdfArea6Selected) selected.Add(6);
+
+            return selected;
         }
 
         // Blister presence (2x3 UI checkboxes)
