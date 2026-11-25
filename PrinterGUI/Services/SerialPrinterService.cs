@@ -76,7 +76,8 @@ namespace PrinterGUI.Services
                         command.StartsWith("G29", StringComparison.OrdinalIgnoreCase) ||   // bed leveling
                         command.StartsWith("G30", StringComparison.OrdinalIgnoreCase) ||   // probing
                         command.StartsWith("M109", StringComparison.OrdinalIgnoreCase) ||  // wait for hotend temp
-                        command.StartsWith("M190", StringComparison.OrdinalIgnoreCase))    // wait for bed temp
+                        command.StartsWith("M190", StringComparison.OrdinalIgnoreCase) ||  // wait for bed temperature
+                        command.StartsWith("M400", StringComparison.OrdinalIgnoreCase))   // wait for moves to finish
                     {
                         ackTimeoutMs = 120000; // 120s
                     }
